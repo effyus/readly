@@ -334,85 +334,93 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: marrom.withValues(alpha: 0.12),
-                          child: Icon(Icons.menu_book, color: marrom),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            nome,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (descricao.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Text(descricao),
-                    ],
-                    const SizedBox(height: 12),
-                    Text(
-                      nomeModalidade,
-                      style: TextStyle(
-                        color: marrom,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (objetivo.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text('Objetivo: $objetivo'),
-                    ],
-                    const SizedBox(height: 6),
-                    Text('Participantes: ${participantes.length}'),
-                    if (duracao is int) ...[
-                      const SizedBox(height: 6),
-                      Text('Duração: $duracao dias'),
-                    ],
-                    if (codigo.isNotEmpty) ...[
-                      const SizedBox(height: 12),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Clube selecionado: $nome')),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          CircleAvatar(
+                            backgroundColor: marrom.withValues(alpha: 0.12),
+                            child: Icon(Icons.menu_book, color: marrom),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Código de entrada: $codigo',
+                              nome,
                               style: const TextStyle(
+                                fontSize: 17,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          IconButton(
-                            tooltip: 'Copiar código',
-                            onPressed: () async {
-                              await Clipboard.setData(
-                                ClipboardData(text: codigo),
-                              );
-
-                              if (!context.mounted) return;
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Código de entrada copiado!'),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.vpn_key_outlined),
-                          ),
                         ],
                       ),
+                      if (descricao.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(descricao),
+                      ],
+                      const SizedBox(height: 12),
+                      Text(
+                        nomeModalidade,
+                        style: TextStyle(
+                          color: marrom,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (objetivo.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text('Objetivo: $objetivo'),
+                      ],
+                      const SizedBox(height: 6),
+                      Text('Participantes: ${participantes.length}'),
+                      if (duracao is int) ...[
+                        const SizedBox(height: 6),
+                        Text('Duração: $duracao dias'),
+                      ],
+                      if (codigo.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Código de entrada: $codigo',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Copiar código',
+                              onPressed: () async {
+                                await Clipboard.setData(
+                                  ClipboardData(text: codigo),
+                                );
+
+                                if (!context.mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Código de entrada copiado!'),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.vpn_key_outlined),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             );
