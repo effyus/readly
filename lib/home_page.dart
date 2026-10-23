@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'clube_detalhes_page.dart';
 import 'criar_clube_page.dart';
 import 'login_page.dart';
 
@@ -337,8 +338,12 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Clube selecionado: $nome')),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          ClubeDetalhesPage(clube: documento.data()),
+                    ),
                   );
                 },
                 child: Padding(
