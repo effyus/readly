@@ -1,5 +1,7 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'criar_clube_page.dart';
 import 'login_page.dart';
@@ -14,7 +16,7 @@ class ReadlyHomePage extends StatefulWidget {
 class _ReadlyHomePageState extends State<ReadlyHomePage> {
   int paginaAtual = 0;
 
-  final Color marrom = Color.fromARGB(255, 132, 81, 11);
+  final Color marrom = const Color.fromARGB(255, 132, 81, 11);
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +42,7 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              setState(() => paginaAtual = 2);
-            },
+            onPressed: () => setState(() => paginaAtual = 2),
             icon: const Icon(Icons.account_circle_outlined),
             tooltip: 'Meu perfil',
           ),
@@ -93,7 +93,6 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
           ),
           const SizedBox(height: 24),
 
-          // Cartão de boas-vindas
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(22),
@@ -158,48 +157,13 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               TextButton(
-                onPressed: () {
-                  setState(() => paginaAtual = 1);
-                },
+                onPressed: () => setState(() => paginaAtual = 1),
                 child: const Text('Ver todos'),
               ),
             ],
           ),
 
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.deepPurple.shade50),
-            ),
-            child: Column(
-              children: [
-                Icon(Icons.groups_rounded, size: 48, color: marrom),
-                const SizedBox(height: 12),
-                const Text(
-                  'Sua jornada começa em um clube!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Crie um clube ou participe de um '
-                  'para ler em grupo.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () {
-                    setState(() => paginaAtual = 1);
-                  },
-                  child: const Text('Conhecer clubes'),
-                ),
-              ],
-            ),
-          ),
+          clubesDoUsuario(compacto: true),
         ],
       ),
     );
@@ -232,46 +196,247 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
   }
 
   Widget clubesPage() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.groups_rounded, size: 76, color: marrom),
-            const SizedBox(height: 20),
-            const Text(
-              'Seus clubes de leitura',
-              style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Seus clubes de leitura',
+            style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Acompanhe suas competições e participe '
+            'da jornada de leitura.',
+            style: TextStyle(color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 20),
+
+          FilledButton.icon(
+            onPressed: abrirCriacaoClube,
+            icon: const Icon(Icons.add),
+            label: const Text('Criar clube'),
+            style: FilledButton.styleFrom(
+              backgroundColor: marrom,
+              padding: const EdgeInsets.all(16),
             ),
-            const SizedBox(height: 10),
-            Text(
-              'Aqui você poderá criar clubes, '
-              'participar de competições e acompanhar '
-              'o progresso dos participantes.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade700),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CriarClubePage(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Criar clube'),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 24),
+
+          clubesDoUsuario(),
+        ],
       ),
     );
   }
 
+  Widget clubesDoUsuario({bool compacto = false}) {
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) {
+      return const Center(
+        child: Text('Entre na sua conta para ver seus clubes.'),
+      );
+    }
+
+    final consulta = FirebaseFirestore.instance
+        .collection('clubes')
+        .where('participantes', arrayContains: usuario.uid);
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: consulta.snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Não foi possível carregar os clubes. '
+              'Verifique sua conexão e as regras do Firebase.',
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final clubes = snapshot.data?.docs ?? [];
+
+        if (clubes.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.deepPurple.shade50),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.groups_rounded, size: 48, color: marrom),
+                const SizedBox(height: 12),
+                const Text(
+                  'Sua jornada começa em um clube!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Crie um clube para começar a ler em grupo.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                if (compacto) ...[
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: abrirCriacaoClube,
+                    child: const Text('Criar meu primeiro clube'),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }
+
+        final lista = compacto ? clubes.take(2).toList() : clubes;
+
+        return Column(
+          children: lista.map((documento) {
+            final dados = documento.data();
+            final nome = dados['nome'] as String? ?? 'Clube sem nome';
+            final descricao = dados['descricao'] as String? ?? '';
+            final modalidade = dados['modalidade'] as String? ?? 'quem_le_mais';
+            final duracao = dados['duracaoDias'];
+            final objetivo = dados['objetivo'] as String? ?? '';
+            final participantes = dados['participantes'] as List? ?? [];
+            final codigo = dados['codigoEntrada'] as String? ?? '';
+
+            String nomeModalidade;
+
+            switch (modalidade) {
+              case 'mais_consistente':
+                nomeModalidade = 'Quem é mais consistente';
+                break;
+              case 'meta_coletiva':
+                nomeModalidade = 'Meta coletiva';
+                break;
+              default:
+                nomeModalidade = 'Quem lê mais';
+            }
+
+            return Card(
+              color: Colors.white,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: marrom.withValues(alpha: 0.12),
+                          child: Icon(Icons.menu_book, color: marrom),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            nome,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (descricao.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Text(descricao),
+                    ],
+                    const SizedBox(height: 12),
+                    Text(
+                      nomeModalidade,
+                      style: TextStyle(
+                        color: marrom,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (objetivo.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text('Objetivo: $objetivo'),
+                    ],
+                    const SizedBox(height: 6),
+                    Text('Participantes: ${participantes.length}'),
+                    if (duracao is int) ...[
+                      const SizedBox(height: 6),
+                      Text('Duração: $duracao dias'),
+                    ],
+                    if (codigo.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Código de entrada: $codigo',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Copiar código',
+                            onPressed: () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: codigo),
+                              );
+
+                              if (!context.mounted) return;
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Código de entrada copiado!'),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.vpn_key_outlined),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Future<void> abrirCriacaoClube() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CriarClubePage()),
+    );
+
+    // O StreamBuilder atualiza a lista automaticamente.
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   Widget perfilPage() {
+    final usuario = FirebaseAuth.instance.currentUser;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -290,11 +455,18 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Suas informações, estatísticas de leitura '
-              'e clubes aparecerão aqui.',
+              usuario?.displayName ?? usuario?.email ?? 'Leitor do Readly',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade700),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Suas informações e estatísticas de leitura '
+              'aparecerão aqui.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 20),
             OutlinedButton.icon(
               onPressed: sairDaConta,
               icon: const Icon(Icons.logout),
