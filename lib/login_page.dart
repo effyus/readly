@@ -87,13 +87,13 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    const marrom =  Color.fromARGB(255, 132, 81, 11);
+    const marrom =  Color(0xFF5D4037);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6FC),
+      backgroundColor: const Color(0xFFF5EFE3),
       appBar: AppBar(
         title: const Text('Entrar no Readly'),
-        backgroundColor: const Color(0xFFF8F6FC),
+        backgroundColor: const Color(0xFFF5EFE3),
       ),
       body: SafeArea(
         child: Center(

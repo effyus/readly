@@ -36,11 +36,11 @@ class ClubeDetalhesPage extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F4EF),
+      backgroundColor: const Color(0xFFF5EFE3),
       appBar: AppBar(
         title: const Text('Detalhes do clube'),
-        backgroundColor: const Color(0xFF795548),
-        foregroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF5EFE3),
+        foregroundColor: const Color(0xFF5D4037),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -88,8 +88,8 @@ class ClubeDetalhesPage extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFFFFCF7),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: SelectableText(
                 codigo.toString(),
@@ -112,8 +112,8 @@ class ClubeDetalhesPage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFFFFCF7),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -125,7 +125,7 @@ class _CadastroPageState extends State<CadastroPage> {
               const Icon(
                 Icons.menu_book_outlined,
                 size: 72,
-                color: Color.fromARGB(255, 132, 81, 11),
+                color: Color(0xFF5D4037),
               ),
               const SizedBox(height: 16),
               const Text(

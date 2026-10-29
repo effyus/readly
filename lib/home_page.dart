@@ -17,16 +17,16 @@ class ReadlyHomePage extends StatefulWidget {
 class _ReadlyHomePageState extends State<ReadlyHomePage> {
   int paginaAtual = 0;
 
-  final Color marrom = const Color.fromARGB(255, 132, 81, 11);
+  final Color marrom = Color(0xFF795548);
 
   @override
   Widget build(BuildContext context) {
     final paginas = [inicioPage(), clubesPage(), perfilPage()];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6FC),
+      backgroundColor: const Color(0xFFF5EFE3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8F6FC),
+        backgroundColor: const Color(0xFFF5EFE3),
         title: Row(
           children: [
             Icon(Icons.menu_book_rounded, color: marrom, size: 30),
@@ -106,12 +106,12 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.auto_stories_rounded, color: Colors.white, size: 42),
+                Icon(Icons.auto_stories_rounded, color: const Color(0xFFFFFCF7), size: 42),
                 SizedBox(height: 16),
                 Text(
                   'Cada página conta!',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: const Color(0xFFFFFCF7),
                     fontSize: 23,
                     fontWeight: FontWeight.bold,
                   ),
@@ -120,7 +120,7 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                 Text(
                   'Leia, participe de clubes e evolua '
                   'junto com outros leitores.',
-                  style: TextStyle(color: Colors.white, fontSize: 15),
+                  style: TextStyle(color: const Color(0xFFFFFCF7), fontSize: 15),
                 ),
               ],
             ),
@@ -174,7 +174,7 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFFFFCF7),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -272,9 +272,9 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: const Color(0xFFFFFCF7),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.deepPurple.shade50),
+              border: Border.all(color: const Color(0xFFE8DCCB)),
             ),
             child: Column(
               children: [
@@ -330,7 +330,7 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
             }
 
             return Card(
-              color: Colors.white,
+              color: const Color(0xFFFFFCF7),
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),

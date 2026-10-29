@@ -12,7 +12,7 @@ class CriarClubePage extends StatefulWidget {
 }
 
 class _CriarClubePageState extends State<CriarClubePage> {
-  static const marrom = Color.fromARGB(255, 132, 81, 11);
+  static const marrom = Color(0xFF795548);
 
   final nomeController = TextEditingController();
   final descricaoController = TextEditingController();
@@ -179,6 +179,7 @@ class _CriarClubePageState extends State<CriarClubePage> {
         labelText: titulo,
         helperText: ajuda,
         border: const OutlineInputBorder(),
+        
       ),
     );
   }
@@ -329,6 +330,7 @@ class _CriarClubePageState extends State<CriarClubePage> {
               label: Text(carregando ? 'Criando clube...' : 'Criar clube'),
               style: FilledButton.styleFrom(
                 backgroundColor: marrom,
+
                 padding: const EdgeInsets.all(16),
               ),
             ),
