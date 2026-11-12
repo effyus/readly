@@ -1,7 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'home_page.dart';
 
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
@@ -11,62 +12,61 @@ class CadastroPage extends StatefulWidget {
 }
 
 class _CadastroPageState extends State<CadastroPage> {
-  final nomeController = TextEditingController();
-  final emailController = TextEditingController();
-  final senhaController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
-  bool carregando = false;
-  bool ocultarSenha = true;
+  final _nomeController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _senhaController = TextEditingController();
+  final _confirmarSenhaController = TextEditingController();
 
-  Future<void> cadastrar() async {
-    final nome = nomeController.text.trim();
-    final email = emailController.text.trim();
-    final senha = senhaController.text;
+  bool _carregando = false;
+  bool _mostrarSenha = false;
+  bool _mostrarConfirmacao = false;
 
-    if (nome.isEmpty || email.isEmpty || senha.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preencha todos os campos.'),
-        ),
-      );
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _emailController.dispose();
+    _senhaController.dispose();
+    _confirmarSenhaController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cadastrar() async {
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    setState(() => carregando = true);
+    setState(() {
+      _carregando = true;
+    });
 
     try {
       final credencial = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
-        email: email,
-        password: senha,
+        email: _emailController.text.trim(),
+        password: _senhaController.text,
       );
 
-      final usuario = credencial.user!;
+      final nome = _nomeController.text.trim();
 
-      await usuario.updateDisplayName(nome);
-
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(usuario.uid)
-          .set({
-        'nome': nome,
-        'email': email,
-        'criadoEm': FieldValue.serverTimestamp(),
-      });
+      if (nome.isNotEmpty) {
+        await credencial.user?.updateDisplayName(nome);
+      }
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Conta criada com sucesso!'),
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const ReadlyHomePage(),
         ),
+        (route) => false,
       );
-
-      Navigator.of(context).pop();
-    } on FirebaseAuthException catch (erro) {
+    } on FirebaseAuthException catch (e) {
       String mensagem;
 
-      switch (erro.code) {
+      switch (e.code) {
         case 'email-already-in-use':
           mensagem = 'Este e-mail já está cadastrado.';
           break;
@@ -74,120 +74,203 @@ class _CadastroPageState extends State<CadastroPage> {
           mensagem = 'Digite um e-mail válido.';
           break;
         case 'weak-password':
-          mensagem = 'A senha deve ter pelo menos 6 caracteres.';
+          mensagem = 'A senha é muito fraca.';
+          break;
+        case 'network-request-failed':
+          mensagem = 'Verifique sua conexão com a internet.';
           break;
         default:
-          mensagem = erro.message ?? 'Não foi possível criar a conta.';
+          mensagem = e.message ?? 'Não foi possível criar a conta.';
       }
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensagem)),
-      );
-    } catch (erro) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Erro ao salvar o perfil. Verifique as regras do Firestore.',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(mensagem)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ocorreu um erro ao criar a conta.'),
           ),
-        ),
-      );
+        );
+      }
     } finally {
       if (mounted) {
-        setState(() => carregando = false);
+        setState(() {
+          _carregando = false;
+        });
       }
     }
   }
 
   @override
-  void dispose() {
-    nomeController.dispose();
-    emailController.dispose();
-    senhaController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    const marrom = Color(0xFF5D4037);
+    const fundo = Color(0xFFF5EFE3);
+
     return Scaffold(
+      backgroundColor: fundo,
       appBar: AppBar(
         title: const Text('Criar conta'),
+        backgroundColor: marrom,
+        foregroundColor: Colors.white,
       ),
-      body: SafeArea(
+      body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(
-                Icons.menu_book_outlined,
-                size: 72,
-                color: Color(0xFF5D4037),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Entre para o Readly!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(
+                  Icons.menu_book_rounded,
+                  size: 64,
+                  color: marrom,
                 ),
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: nomeController,
-                decoration: const InputDecoration(
-                  labelText: 'Nome',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_outline),
+                const SizedBox(height: 12),
+                const Text(
+                  'Faça parte do Readly',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: marrom,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'E-mail',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email_outlined),
+                const SizedBox(height: 28),
+
+                TextFormField(
+                  controller: _nomeController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Informe seu nome.';
+                    }
+                    return null;
+                  },
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: senhaController,
-                obscureText: ocultarSenha,
-                decoration: InputDecoration(
-                  labelText: 'Senha',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      ocultarSenha
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'E-mail',
+                    prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Informe seu e-mail.';
+                    }
+
+                    if (!RegExp(
+                      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                    ).hasMatch(value.trim())) {
+                      return 'Digite um e-mail válido.';
+                    }
+
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _senhaController,
+                  obscureText: !_mostrarSenha,
+                  decoration: InputDecoration(
+                    labelText: 'Senha',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _mostrarSenha
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _mostrarSenha = !_mostrarSenha;
+                        });
+                      },
                     ),
-                    onPressed: () {
-                      setState(() {
-                        ocultarSenha = !ocultarSenha;
-                      });
-                    },
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Informe uma senha.';
+                    }
+
+                    if (value.length < 6) {
+                      return 'A senha deve ter pelo menos 6 caracteres.';
+                    }
+
+                    return null;
+                  },
                 ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: carregando ? null : cadastrar,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    carregando ? 'Criando conta...' : 'Cadastrar',
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _confirmarSenhaController,
+                  obscureText: !_mostrarConfirmacao,
+                  decoration: InputDecoration(
+                    labelText: 'Confirmar senha',
+                    prefixIcon: const Icon(Icons.lock_reset),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _mostrarConfirmacao
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _mostrarConfirmacao = !_mostrarConfirmacao;
+                        });
+                      },
+                    ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Confirme sua senha.';
+                    }
+
+                    if (value != _senhaController.text) {
+                      return 'As senhas não são iguais.';
+                    }
+
+                    return null;
+                  },
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+
+                ElevatedButton(
+                  onPressed: _carregando ? null : _cadastrar,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: marrom,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _carregando
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Criar conta'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

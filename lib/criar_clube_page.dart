@@ -1,3 +1,4 @@
+
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -13,10 +14,10 @@ class CriarClubePage extends StatefulWidget {
 
 class _CriarClubePageState extends State<CriarClubePage> {
   static const marrom = Color(0xFF795548);
+  static const fundo = Color(0xFFF5EFE3);
 
   final nomeController = TextEditingController();
   final descricaoController = TextEditingController();
-  final objetivoController = TextEditingController();
   final metaController = TextEditingController();
   final duracaoController = TextEditingController();
   final competidoresController = TextEditingController();
@@ -46,38 +47,52 @@ class _CriarClubePageState extends State<CriarClubePage> {
     ).join();
   }
 
+  void mostrarMensagem(String mensagem) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(mensagem)),
+      );
+  }
+
   Future<void> criarClube() async {
+    if (carregando) return;
+
     final nome = nomeController.text.trim();
     final descricao = descricaoController.text.trim();
-    final objetivo = objetivoController.text.trim();
+    
     final meta = int.tryParse(metaController.text.trim());
     final duracao = int.tryParse(duracaoController.text.trim());
+
     final limiteTexto = competidoresController.text.trim();
-    final limite = limiteTexto.isEmpty ? null : int.tryParse(limiteTexto);
+    final limite = limiteTexto.isEmpty
+        ? null
+        : int.tryParse(limiteTexto);
+
     final regras = regrasController.text.trim();
 
-    if (nome.isEmpty ||
-        objetivo.isEmpty ||
-        meta == null ||
-        meta <= 0 ||
-        duracao == null ||
-        duracao <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Preencha o nome, informe uma meta '
-            'e sua duração.',
-          ),
-        ),
-      );
+    // Valida os campos obrigatórios.
+    if (nome.isEmpty) {
+      mostrarMensagem('Informe o nome do clube.');
       return;
     }
 
-    if (limiteTexto.isNotEmpty && (limite == null || limite < 2)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('O limite deve ser de pelo menos 2 competidores.'),
-        ),
+    if (meta == null || meta <= 0) {
+      mostrarMensagem('Informe uma meta válida, maior que zero.');
+      return;
+    }
+
+    if (duracao == null || duracao <= 0) {
+      mostrarMensagem('Informe uma duração válida em dias.');
+      return;
+    }
+
+    if (limiteTexto.isNotEmpty &&
+        (limite == null || limite < 2)) {
+      mostrarMensagem(
+        'O limite deve ser de pelo menos 2 competidores.',
       );
       return;
     }
@@ -85,35 +100,20 @@ class _CriarClubePageState extends State<CriarClubePage> {
     final usuario = FirebaseAuth.instance.currentUser;
 
     if (usuario == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Entre na sua conta para criar um clube.'),
-        ),
-      );
+      mostrarMensagem('Entre na sua conta para criar um clube.');
       return;
     }
 
-    setState(() => carregando = true);
+    setState(() {
+      carregando = true;
+    });
 
     try {
       final codigo = gerarCodigo();
 
-      final clubes = FirebaseFirestore.instance.collection('clubes');
-
-      // Confere se o código já existe antes de utilizá-lo.
-      final codigoExistente = await clubes
-          .where('codigoEntrada', isEqualTo: codigo)
-          .limit(1)
-          .get();
-
-      if (codigoExistente.docs.isNotEmpty) {
-        throw Exception('Não foi possível gerar um código. Tente novamente.');
-      }
-
-      await clubes.add({
+      final dadosClube = <String, dynamic>{
         'nome': nome,
         'descricao': descricao,
-        'objetivo': objetivo,
         'metaValor': meta,
         'duracaoDias': duracao,
         'limiteCompetidores': limite,
@@ -126,25 +126,50 @@ class _CriarClubePageState extends State<CriarClubePage> {
         'participantes': [usuario.uid],
         'codigoEntrada': codigo,
         'criadoEm': FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Salva diretamente no Firestore.
+      // Não fazemos uma consulta prévia pelo código, pois
+      // essa consulta pode ser bloqueada pelas regras de leitura.
+      await FirebaseFirestore.instance
+          .collection('clubes')
+          .add(dadosClube);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Clube criado! Código de entrada: $codigo'),
-          duration: const Duration(seconds: 5),
-        ),
+      mostrarMensagem(
+        'Clube criado com sucesso! Código: $codigo',
       );
 
       Navigator.of(context).pop();
-    } catch (e) {
-      debugPrint('ERRO AO CRIAR CLUBE: $e');
+    } on FirebaseException catch (e) {
+      debugPrint('Erro Firebase ao criar clube: ${e.code}');
+      debugPrint('Detalhes: ${e.message}');
 
-      if (!mounted) return;
+      String mensagem;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erro ao criar clube: $e')));
+      if (e.code == 'permission-denied') {
+        mensagem =
+            'O Firebase bloqueou a criação do clube. '
+            'Verifique as regras do Firestore.';
+      } else if (e.code == 'unavailable') {
+        mensagem =
+            'Não foi possível conectar ao Firebase. '
+            'Verifique sua internet e tente novamente.';
+      } else {
+        mensagem =
+            'Erro ao criar clube (${e.code}): '
+            '${e.message ?? "Sem detalhes"}';
+      }
+
+      mostrarMensagem(mensagem);
+    } catch (e, stackTrace) {
+      debugPrint('Erro ao criar clube: $e');
+      debugPrintStack(stackTrace: stackTrace);
+
+      mostrarMensagem(
+        'Não foi possível criar o clube. Tente novamente.',
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -158,7 +183,6 @@ class _CriarClubePageState extends State<CriarClubePage> {
   void dispose() {
     nomeController.dispose();
     descricaoController.dispose();
-    objetivoController.dispose();
     metaController.dispose();
     duracaoController.dispose();
     competidoresController.dispose();
@@ -170,7 +194,7 @@ class _CriarClubePageState extends State<CriarClubePage> {
     required TextEditingController controller,
     required String titulo,
     String? ajuda,
-    bool obrigatorio = true,
+    IconData? icone,
   }) {
     return TextField(
       controller: controller,
@@ -178,8 +202,8 @@ class _CriarClubePageState extends State<CriarClubePage> {
       decoration: InputDecoration(
         labelText: titulo,
         helperText: ajuda,
+        prefixIcon: icone == null ? null : Icon(icone),
         border: const OutlineInputBorder(),
-        
       ),
     );
   }
@@ -187,20 +211,35 @@ class _CriarClubePageState extends State<CriarClubePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Criar clube')),
+      backgroundColor: fundo,
+      appBar: AppBar(
+        title: const Text('Criar clube'),
+        backgroundColor: marrom,
+        foregroundColor: Colors.white,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.menu_book_rounded, size: 64, color: marrom),
+            const Icon(
+              Icons.menu_book_rounded,
+              size: 64,
+              color: marrom,
+            ),
             const SizedBox(height: 16),
+
             const Text(
               'Crie seu clube de leitura',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: marrom,
+              ),
             ),
             const SizedBox(height: 8),
+
             const Text(
               'Defina como será a competição e convide outros leitores.',
               textAlign: TextAlign.center,
@@ -209,6 +248,7 @@ class _CriarClubePageState extends State<CriarClubePage> {
 
             TextField(
               controller: nomeController,
+              textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Nome do clube *',
                 border: OutlineInputBorder(),
@@ -238,7 +278,9 @@ class _CriarClubePageState extends State<CriarClubePage> {
               groupValue: modalidade,
               onChanged: (valor) {
                 if (valor != null) {
-                  setState(() => modalidade = valor);
+                  setState(() {
+                    modalidade = valor;
+                  });
                 }
               },
               child: const Column(
@@ -247,8 +289,7 @@ class _CriarClubePageState extends State<CriarClubePage> {
                     value: 'quem_le_mais',
                     title: Text('Quem lê mais'),
                     subtitle: Text(
-                      'Competição individual: vence quem acumular '
-                      'mais páginas lidas.',
+                      'Vence quem acumular mais páginas lidas.',
                     ),
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -256,8 +297,7 @@ class _CriarClubePageState extends State<CriarClubePage> {
                     value: 'mais_consistente',
                     title: Text('Quem é mais consistente'),
                     subtitle: Text(
-                      'Competição individual: classificação baseada '
-                      'na frequência de leitura.',
+                      'Classificação baseada na frequência de leitura.',
                     ),
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -265,8 +305,7 @@ class _CriarClubePageState extends State<CriarClubePage> {
                     value: 'meta_coletiva',
                     title: Text('Meta coletiva'),
                     subtitle: Text(
-                      'Competição colaborativa: todos contribuem '
-                      'para alcançar uma meta comum.',
+                      'Todos contribuem para alcançar uma meta comum.',
                     ),
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -275,40 +314,28 @@ class _CriarClubePageState extends State<CriarClubePage> {
             ),
             const SizedBox(height: 16),
 
-            TextField(
+            campoNumerico(
               controller: metaController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: '$textoMeta *',
-                helperText: modalidade == 'mais_consistente'
-                    ? 'Quantidade de dias de leitura pretendida'
-                    : 'Informe a quantidade de páginas',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.flag_outlined),
-              ),
+              titulo: '$textoMeta *',
+              ajuda: modalidade == 'mais_consistente'
+                  ? 'Quantidade de dias de leitura pretendida'
+                  : 'Informe a quantidade de páginas',
+              icone: Icons.flag_outlined,
             ),
             const SizedBox(height: 16),
 
-            TextField(
+            campoNumerico(
               controller: duracaoController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Duração da competição (dias) *',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.calendar_month_outlined),
-              ),
+              titulo: 'Duração da competição (dias) *',
+              icone: Icons.calendar_month_outlined,
             ),
             const SizedBox(height: 16),
 
-            TextField(
+            campoNumerico(
               controller: competidoresController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Limite de competidores (opcional)',
-                helperText: 'Deixe vazio para não definir um limite',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.people_outline),
-              ),
+              titulo: 'Limite de competidores (opcional)',
+              ajuda: 'Deixe vazio para não definir um limite',
+              icone: Icons.people_outline,
             ),
             const SizedBox(height: 16),
 
@@ -326,11 +353,22 @@ class _CriarClubePageState extends State<CriarClubePage> {
 
             FilledButton.icon(
               onPressed: carregando ? null : criarClube,
-              icon: const Icon(Icons.add),
-              label: Text(carregando ? 'Criando clube...' : 'Criar clube'),
+              icon: carregando
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.add),
+              label: Text(
+                carregando ? 'Criando clube...' : 'Criar clube',
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: marrom,
-
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.all(16),
               ),
             ),
