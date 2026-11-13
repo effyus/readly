@@ -13,29 +13,15 @@ class CriarClubePage extends StatefulWidget {
 }
 
 class _CriarClubePageState extends State<CriarClubePage> {
+  static const cafe = Color(0xFF5D4037);
   static const marrom = Color(0xFF795548);
   static const fundo = Color(0xFFF5EFE3);
+  static const papel = Color(0xFFFFFCF7);
 
   final nomeController = TextEditingController();
   final descricaoController = TextEditingController();
-  final metaController = TextEditingController();
-  final duracaoController = TextEditingController();
-  final competidoresController = TextEditingController();
-  final regrasController = TextEditingController();
 
-  String modalidade = 'quem_le_mais';
   bool carregando = false;
-
-  String get textoMeta {
-    switch (modalidade) {
-      case 'mais_consistente':
-        return 'Meta de dias de leitura';
-      case 'meta_coletiva':
-        return 'Meta coletiva de páginas';
-      default:
-        return 'Meta de páginas por participante';
-    }
-  }
 
   String gerarCodigo() {
     const caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -50,11 +36,9 @@ class _CriarClubePageState extends State<CriarClubePage> {
   void mostrarMensagem(String mensagem) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(mensagem)),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensagem)),
+    );
   }
 
   Future<void> criarClube() async {
@@ -62,38 +46,9 @@ class _CriarClubePageState extends State<CriarClubePage> {
 
     final nome = nomeController.text.trim();
     final descricao = descricaoController.text.trim();
-    
-    final meta = int.tryParse(metaController.text.trim());
-    final duracao = int.tryParse(duracaoController.text.trim());
 
-    final limiteTexto = competidoresController.text.trim();
-    final limite = limiteTexto.isEmpty
-        ? null
-        : int.tryParse(limiteTexto);
-
-    final regras = regrasController.text.trim();
-
-    // Valida os campos obrigatórios.
     if (nome.isEmpty) {
       mostrarMensagem('Informe o nome do clube.');
-      return;
-    }
-
-    if (meta == null || meta <= 0) {
-      mostrarMensagem('Informe uma meta válida, maior que zero.');
-      return;
-    }
-
-    if (duracao == null || duracao <= 0) {
-      mostrarMensagem('Informe uma duração válida em dias.');
-      return;
-    }
-
-    if (limiteTexto.isNotEmpty &&
-        (limite == null || limite < 2)) {
-      mostrarMensagem(
-        'O limite deve ser de pelo menos 2 competidores.',
-      );
       return;
     }
 
@@ -104,77 +59,44 @@ class _CriarClubePageState extends State<CriarClubePage> {
       return;
     }
 
-    setState(() {
-      carregando = true;
-    });
+    setState(() => carregando = true);
 
     try {
       final codigo = gerarCodigo();
 
-      final dadosClube = <String, dynamic>{
+      await FirebaseFirestore.instance
+          .collection('clubes')
+          .add({
         'nome': nome,
         'descricao': descricao,
-        'metaValor': meta,
-        'duracaoDias': duracao,
-        'limiteCompetidores': limite,
-        'regras': regras,
-        'modalidade': modalidade,
-        'tipoCompeticao': modalidade == 'meta_coletiva'
-            ? 'colaborativa'
-            : 'individual',
         'criadorId': usuario.uid,
         'participantes': [usuario.uid],
         'codigoEntrada': codigo,
         'criadoEm': FieldValue.serverTimestamp(),
-      };
-
-      // Salva diretamente no Firestore.
-      // Não fazemos uma consulta prévia pelo código, pois
-      // essa consulta pode ser bloqueada pelas regras de leitura.
-      await FirebaseFirestore.instance
-          .collection('clubes')
-          .add(dadosClube);
+      });
 
       if (!mounted) return;
 
-      mostrarMensagem(
-        'Clube criado com sucesso! Código: $codigo',
-      );
-
+      mostrarMensagem('Clube criado com sucesso!');
       Navigator.of(context).pop();
-    } on FirebaseException catch (e) {
-      debugPrint('Erro Firebase ao criar clube: ${e.code}');
-      debugPrint('Detalhes: ${e.message}');
 
-      String mensagem;
+    } on FirebaseException catch (e) {
+      if (!mounted) return;
 
       if (e.code == 'permission-denied') {
-        mensagem =
-            'O Firebase bloqueou a criação do clube. '
-            'Verifique as regras do Firestore.';
-      } else if (e.code == 'unavailable') {
-        mensagem =
-            'Não foi possível conectar ao Firebase. '
-            'Verifique sua internet e tente novamente.';
+        mostrarMensagem(
+          'Permissão negada. Confira as regras do Firestore.',
+        );
       } else {
-        mensagem =
-            'Erro ao criar clube (${e.code}): '
-            '${e.message ?? "Sem detalhes"}';
+        mostrarMensagem(
+          'Não foi possível criar o clube: ${e.message ?? e.code}',
+        );
       }
-
-      mostrarMensagem(mensagem);
-    } catch (e, stackTrace) {
-      debugPrint('Erro ao criar clube: $e');
-      debugPrintStack(stackTrace: stackTrace);
-
-      mostrarMensagem(
-        'Não foi possível criar o clube. Tente novamente.',
-      );
+    } catch (e) {
+      mostrarMensagem('Erro ao criar clube: $e');
     } finally {
       if (mounted) {
-        setState(() {
-          carregando = false;
-        });
+        setState(() => carregando = false);
       }
     }
   }
@@ -183,29 +105,7 @@ class _CriarClubePageState extends State<CriarClubePage> {
   void dispose() {
     nomeController.dispose();
     descricaoController.dispose();
-    metaController.dispose();
-    duracaoController.dispose();
-    competidoresController.dispose();
-    regrasController.dispose();
     super.dispose();
-  }
-
-  Widget campoNumerico({
-    required TextEditingController controller,
-    required String titulo,
-    String? ajuda,
-    IconData? icone,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(
-        labelText: titulo,
-        helperText: ajuda,
-        prefixIcon: icone == null ? null : Icon(icone),
-        border: const OutlineInputBorder(),
-      ),
-    );
   }
 
   @override
@@ -214,162 +114,147 @@ class _CriarClubePageState extends State<CriarClubePage> {
       backgroundColor: fundo,
       appBar: AppBar(
         title: const Text('Criar clube'),
-        backgroundColor: marrom,
-        foregroundColor: Colors.white,
+        backgroundColor: fundo,
+        foregroundColor: cafe,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.menu_book_rounded,
-              size: 64,
-              color: marrom,
-            ),
-            const SizedBox(height: 16),
-
-            const Text(
-              'Crie seu clube de leitura',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: marrom,
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: cafe,
+                borderRadius: BorderRadius.circular(24),
               ),
-            ),
-            const SizedBox(height: 8),
-
-            const Text(
-              'Defina como será a competição e convide outros leitores.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 28),
-
-            TextField(
-              controller: nomeController,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Nome do clube *',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.groups_outlined),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: descricaoController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Descrição (opcional)',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            const Text(
-              'Modalidade da competição',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-
-            RadioGroup<String>(
-              groupValue: modalidade,
-              onChanged: (valor) {
-                if (valor != null) {
-                  setState(() {
-                    modalidade = valor;
-                  });
-                }
-              },
               child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  RadioListTile<String>(
-                    value: 'quem_le_mais',
-                    title: Text('Quem lê mais'),
-                    subtitle: Text(
-                      'Vence quem acumular mais páginas lidas.',
-                    ),
-                    contentPadding: EdgeInsets.zero,
+                  Icon(
+                    Icons.groups_rounded,
+                    color: Color(0xFFEACDA7),
+                    size: 45,
                   ),
-                  RadioListTile<String>(
-                    value: 'mais_consistente',
-                    title: Text('Quem é mais consistente'),
-                    subtitle: Text(
-                      'Classificação baseada na frequência de leitura.',
+                  SizedBox(height: 18),
+                  Text(
+                    'Crie seu espaço de leitura.',
+                    style: TextStyle(
+                      color: papel,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                    contentPadding: EdgeInsets.zero,
                   ),
-                  RadioListTile<String>(
-                    value: 'meta_coletiva',
-                    title: Text('Meta coletiva'),
-                    subtitle: Text(
-                      'Todos contribuem para alcançar uma meta comum.',
+                  SizedBox(height: 10),
+                  Text(
+                    'Reúna seus amigos, compartilhe histórias '
+                    'e organize desafios quando quiser.',
+                    style: TextStyle(
+                      color: Color(0xFFF5EFE3),
+                      fontSize: 14,
+                      height: 1.5,
                     ),
-                    contentPadding: EdgeInsets.zero,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
 
-            campoNumerico(
-              controller: metaController,
-              titulo: '$textoMeta *',
-              ajuda: modalidade == 'mais_consistente'
-                  ? 'Quantidade de dias de leitura pretendida'
-                  : 'Informe a quantidade de páginas',
-              icone: Icons.flag_outlined,
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 30),
 
-            campoNumerico(
-              controller: duracaoController,
-              titulo: 'Duração da competição (dias) *',
-              icone: Icons.calendar_month_outlined,
-            ),
-            const SizedBox(height: 16),
-
-            campoNumerico(
-              controller: competidoresController,
-              titulo: 'Limite de competidores (opcional)',
-              ajuda: 'Deixe vazio para não definir um limite',
-              icone: Icons.people_outline,
-            ),
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: regrasController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Regras (opcional)',
-                hintText: 'Defina as regras para os participantes',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
+            const Text(
+              'Informações do clube',
+              style: TextStyle(
+                fontSize: 21,
+                color: cafe,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 18),
+
+            TextField(
+              controller: nomeController,
+              maxLength: 60,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Nome do clube *',
+                hintText: 'Ex.: Clube dos Leitores',
+                prefixIcon: Icon(Icons.menu_book_rounded),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            TextField(
+              controller: descricaoController,
+              maxLines: 4,
+              maxLength: 300,
+              decoration: const InputDecoration(
+                labelText: 'Descrição (opcional)',
+                hintText:
+                    'Conte um pouco sobre o propósito do clube...',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.edit_note_rounded),
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: papel,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFFD8C7AE),
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: marrom,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Após criar o clube, você poderá '
+                      'organizar competições e convidar leitores.',
+                      style: TextStyle(
+                        color: marrom,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 28),
 
             FilledButton.icon(
               onPressed: carregando ? null : criarClube,
               icon: carregando
                   ? const SizedBox(
-                      height: 20,
                       width: 20,
+                      height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.add),
+                  : const Icon(Icons.add_rounded),
               label: Text(
                 carregando ? 'Criando clube...' : 'Criar clube',
               ),
               style: FilledButton.styleFrom(
-                backgroundColor: marrom,
+                backgroundColor: cafe,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(17),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
             ),
           ],

@@ -411,136 +411,52 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
   }
 
   Widget competicoesPage() {
-    const cafe = Color(0xFF5D4037);
-    const marrom = Color(0xFF795548);
-    const caramelo = Color(0xFFA67C52);
-    const texto = Color(0xFF3E3028);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+    return Padding(
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'SUAS JORNADAS',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-              color: marrom,
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          const Text(
             'Competições',
             style: TextStyle(
               fontSize: 28,
+              color: Color(0xFF5D4037),
               fontWeight: FontWeight.bold,
-              color: texto,
             ),
           ),
-
           const SizedBox(height: 8),
-
           const Text(
-            'Acompanhe seus desafios e evolua '
-            'a cada página lida.',
-            style: TextStyle(fontSize: 15, color: marrom, height: 1.5),
+            'Acompanhe os desafios dos seus clubes.',
+            style: TextStyle(color: Color(0xFF795548)),
           ),
-
-          const SizedBox(height: 24),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: cafe,
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: const Row(
-              children: [
-                Icon(
-                  Icons.emoji_events_rounded,
-                  color: Color(0xFFEACDA7),
-                  size: 45,
-                ),
-
-                SizedBox(width: 16),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Desafie seus limites!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      SizedBox(height: 8),
-
-                      Text(
-                        'Cada leitura aproxima você '
-                        'de uma nova conquista.',
-                        style: TextStyle(
-                          color: Color(0xFFF5EFE3),
-                          fontSize: 13,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
+          const Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.emoji_events_outlined,
+                    size: 65,
+                    color: Color(0xFFA67C52),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 30),
-
-          const Row(
-            children: [
-              Icon(
-                Icons.local_fire_department_rounded,
-                color: caramelo,
-                size: 25,
-              ),
-              SizedBox(width: 10),
-              Text(
-                'Meus desafios',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                  color: texto,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Exibe as competições dos clubes do usuário.
-          // Reutiliza a consulta existente ao Firestore.
-          clubesDoUsuario(),
-
-          const SizedBox(height: 20),
-
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                setState(() => paginaAtual = 1);
-              },
-              icon: const Icon(Icons.groups_outlined),
-              label: const Text('Explorar meus clubes'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: cafe,
-                side: const BorderSide(color: marrom),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                  SizedBox(height: 16),
+                  Text(
+                    'Suas competições aparecerão aqui!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5D4037),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'As competições serão organizadas '
+                    'dentro dos seus clubes de leitura.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF795548)),
+                  ),
+                ],
               ),
             ),
           ),
@@ -663,24 +579,8 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
             final dados = documento.data();
             final nome = dados['nome'] as String? ?? 'Clube sem nome';
             final descricao = dados['descricao'] as String? ?? '';
-            final modalidade = dados['modalidade'] as String? ?? 'quem_le_mais';
-            final duracao = dados['duracaoDias'];
-            final objetivo = dados['objetivo'] as String? ?? '';
             final participantes = dados['participantes'] as List? ?? [];
             final codigo = dados['codigoEntrada'] as String? ?? '';
-
-            String nomeModalidade;
-
-            switch (modalidade) {
-              case 'mais_consistente':
-                nomeModalidade = 'Quem é mais consistente';
-                break;
-              case 'meta_coletiva':
-                nomeModalidade = 'Meta coletiva';
-                break;
-              default:
-                nomeModalidade = 'Quem lê mais';
-            }
 
             return Card(
               color: const Color(0xFFFFFCF7),
@@ -728,23 +628,10 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                         Text(descricao),
                       ],
                       const SizedBox(height: 12),
-                      Text(
-                        nomeModalidade,
-                        style: TextStyle(
-                          color: marrom,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (objetivo.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text('Objetivo: $objetivo'),
-                      ],
+
                       const SizedBox(height: 6),
                       Text('Participantes: ${participantes.length}'),
-                      if (duracao is int) ...[
-                        const SizedBox(height: 6),
-                        Text('Duração: $duracao dias'),
-                      ],
+
                       if (codigo.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Row(
