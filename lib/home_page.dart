@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'meus_livros_page.dart';
 import 'clube_detalhes_page.dart';
 import 'criar_clube_page.dart';
 import 'login_page.dart';
@@ -88,277 +88,249 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
     );
   }
 
-  Widget inicioPage() {
-    const cafe = Color(0xFF5D4037);
-    const marrom = Color(0xFF795548);
-    const caramelo = Color(0xFFA67C52);
-    const texto = Color(0xFF3E3028);
-    const papelClaro = Color(0xFFFFFCF7);
-    const borda = Color(0xFFD8C7AE);
+  
+Widget inicioPage() {
+  const cafe = Color(0xFF5D4037);
+  const marrom = Color(0xFF795548);
+  const caramelo = Color(0xFFA67C52);
+  const papel = Color(0xFFFFFCF7);
 
-    final usuario = FirebaseAuth.instance.currentUser;
-    final nomeCompleto = usuario?.displayName?.trim() ?? '';
-    final primeiroNome = nomeCompleto.isNotEmpty
-        ? nomeCompleto.split(' ').first
-        : 'leitor';
+  final usuario = FirebaseAuth.instance.currentUser;
+  final nome = usuario?.displayName?.trim() ?? '';
+  final primeiroNome =
+      nome.isEmpty ? 'leitor' : nome.split(' ').first;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Saudação
-          const Text(
-            'SUA JORNADA LITERÁRIA',
-            style: TextStyle(
-              fontSize: 11,
+  Widget atalho({
+    required IconData icone,
+    required String titulo,
+    required String descricao,
+    required VoidCallback acao,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: acao,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: papel,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: const Color(0xFFD8C7AE),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE7D7C2),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(icone, color: cafe),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titulo,
+                    style: const TextStyle(
+                      color: cafe,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    descricao,
+                    style: const TextStyle(
+                      color: marrom,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
               color: marrom,
-              letterSpacing: 2,
-              fontWeight: FontWeight.bold,
+              size: 16,
             ),
-          ),
-
-          const SizedBox(height: 12),
-
-          Text(
-            'Olá, $primeiroNome!',
-            style: const TextStyle(
-              fontSize: 29,
-              fontWeight: FontWeight.bold,
-              color: texto,
-            ),
-          ),
-
-          const SizedBox(height: 6),
-
-          // Banner principal
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: cafe,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: cafe.withValues(alpha: 0.15),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.auto_stories_rounded,
-                      color: Color(0xFFEACDA7),
-                      size: 38,
-                    ),
-                    Spacer(),
-                    Icon(
-                      Icons.auto_awesome_outlined,
-                      color: Color(0xFFEACDA7),
-                      size: 22,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 22),
-
-                const Text(
-                  'Cada página é\numa conquista.',
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.bold,
-                    height: 1.2,
-                    color: papelClaro,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                const Text(
-                  'Compartilhe suas leituras, participe de '
-                  'desafios e evolua junto com outros leitores.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFFF5EFE3),
-                    height: 1.5,
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      setState(() => paginaAtual = 1);
-                    },
-                    icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-                    label: const Text('Explorar meus clubes'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: caramelo,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Estatísticas
-          const Text(
-            'Sua atividade',
-            style: TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.bold,
-              color: texto,
-            ),
-          ),
-
-          const SizedBox(height: 6),
-
-          const Text(
-            'Acompanhe sua evolução na leitura.',
-            style: TextStyle(fontSize: 13, color: marrom),
-          ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              Expanded(
-                child: estatisticaCard(
-                  Icons.menu_book_rounded,
-                  '0',
-                  'Páginas lidas',
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: estatisticaCard(
-                  Icons.local_fire_department_rounded,
-                  '0 dias',
-                  'Sua sequência',
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-
-          // Clubes
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Meus clubes',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                  color: texto,
-                ),
-              ),
-
-              TextButton.icon(
-                onPressed: () {
-                  setState(() => paginaAtual = 1);
-                },
-                icon: const Icon(Icons.arrow_forward_ios_rounded, size: 13),
-                label: const Text('Ver todos'),
-                style: TextButton.styleFrom(foregroundColor: marrom),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 6),
-
-          const Text(
-            'Suas histórias ficam melhores em companhia.',
-            style: TextStyle(fontSize: 13, color: marrom),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Mantém a integração original com o Firestore
-          clubesDoUsuario(compacto: true),
-
-          const SizedBox(height: 22),
-
-          // Convite para criar clube
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: papelClaro,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: borda),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(13),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE7D7C2),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.groups_rounded,
-                    color: cafe,
-                    size: 27,
-                  ),
-                ),
-
-                const SizedBox(width: 14),
-
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Crie seu clube',
-                        style: TextStyle(
-                          color: texto,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Convide amigos para um desafio de leitura.',
-                        style: TextStyle(
-                          color: marrom,
-                          fontSize: 12,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                IconButton(
-                  onPressed: abrirCriacaoClube,
-                  icon: const Icon(Icons.arrow_forward_rounded, color: cafe),
-                  tooltip: 'Criar clube',
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
+  return ListView(
+    padding: const EdgeInsets.all(20),
+    children: [
+      const Text(
+        'SUA JORNADA LITERÁRIA',
+        style: TextStyle(
+          color: marrom,
+          letterSpacing: 2,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      const SizedBox(height: 12),
+
+      Text(
+        'Olá, $primeiroNome!',
+        style: const TextStyle(
+          fontSize: 29,
+          fontWeight: FontWeight.bold,
+          color: cafe,
+        ),
+      ),
+
+      const SizedBox(height: 7),
+
+      const Text(
+        'Que tal descobrir uma nova história hoje?',
+        style: TextStyle(
+          fontSize: 15,
+          color: marrom,
+        ),
+      ),
+
+      const SizedBox(height: 26),
+
+      Container(
+        padding: const EdgeInsets.all(25),
+        decoration: BoxDecoration(
+          color: cafe,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.auto_stories_rounded,
+              size: 43,
+              color: Color(0xFFEACDA7),
+            ),
+            SizedBox(height: 18),
+            Text(
+              'Toda grande história\ncomeça com uma página.',
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                height: 1.3,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'O Readly acompanha sua jornada e transforma '
+              'a leitura em uma experiência compartilhada.',
+              style: TextStyle(
+                color: Color(0xFFF5EFE3),
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(height: 32),
+
+      const Text(
+        'Explore o Readly',
+        style: TextStyle(
+          color: cafe,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      const SizedBox(height: 8),
+
+      const Text(
+        'Escolha por onde começar sua jornada.',
+        style: TextStyle(
+          color: marrom,
+          fontSize: 14,
+        ),
+      ),
+
+      const SizedBox(height: 20),
+
+      atalho(
+        icone: Icons.menu_book_rounded,
+        titulo: 'Minha biblioteca',
+        descricao: 'Organize seus livros e suas leituras.',
+        acao: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const MeusLivrosPage(),
+            ),
+          );
+        },
+      ),
+
+      const SizedBox(height: 12),
+
+      atalho(
+        icone: Icons.groups_rounded,
+        titulo: 'Clubes de leitura',
+        descricao: 'Encontre seus grupos e outros leitores.',
+        acao: () {
+          setState(() => paginaAtual = 1);
+        },
+      ),
+
+      const SizedBox(height: 12),
+
+      atalho(
+        icone: Icons.emoji_events_rounded,
+        titulo: 'Competições',
+        descricao: 'Acompanhe desafios e metas de leitura.',
+        acao: () {
+          setState(() => paginaAtual = 2);
+        },
+      ),
+
+      const SizedBox(height: 30),
+
+      Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE7D7C2),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: const Row(
+          children: [
+            Icon(
+              Icons.lightbulb_outline_rounded,
+              color: caramelo,
+              size: 30,
+            ),
+            SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                'O segredo do hábito de leitura é a constância. '
+                'Algumas páginas por dia já fazem diferença!',
+                style: TextStyle(
+                  color: cafe,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
 
   Widget estatisticaCard(IconData icone, String valor, String descricao) {
     const cafe = Color(0xFF5D4037);
@@ -410,60 +382,202 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
     );
   }
 
-  Widget competicoesPage() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Competições',
-            style: TextStyle(
-              fontSize: 28,
-              color: Color(0xFF5D4037),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Acompanhe os desafios dos seus clubes.',
-            style: TextStyle(color: Color(0xFF795548)),
-          ),
-          const Expanded(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.emoji_events_outlined,
-                    size: 65,
-                    color: Color(0xFFA67C52),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Suas competições aparecerão aqui!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5D4037),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'As competições serão organizadas '
-                    'dentro dos seus clubes de leitura.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Color(0xFF795548)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+  
+Widget competicoesPage() {
+  const cafe = Color(0xFF5D4037);
+  const marrom = Color(0xFF795548);
+
+  final usuario = FirebaseAuth.instance.currentUser;
+
+  if (usuario == null) {
+    return const Center(
+      child: Text('Faça login para ver suas competições.'),
     );
   }
+
+  String modalidadeTexto(String valor) {
+    switch (valor) {
+      case 'quem_le_mais':
+        return 'Quem lê mais';
+      case 'mais_consistente':
+        return 'Mais consistente';
+      case 'meta_coletiva':
+        return 'Meta coletiva';
+      default:
+        return 'Competição';
+    }
+  }
+
+  final clubes = FirebaseFirestore.instance
+      .collection('clubes')
+      .where('participantes', arrayContains: usuario.uid);
+
+  return ListView(
+    padding: const EdgeInsets.all(20),
+    children: [
+      const Text(
+        'Competições',
+        style: TextStyle(
+          color: cafe,
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      const SizedBox(height: 8),
+      const Text(
+        'Os desafios dos seus clubes de leitura.',
+        style: TextStyle(color: marrom),
+      ),
+      const SizedBox(height: 24),
+
+      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: clubes.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Text(
+              'Não foi possível carregar seus clubes.',
+            );
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          final documentos = snapshot.data!.docs;
+
+          if (documentos.isEmpty) {
+            return const Card(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Você ainda não participa de nenhum clube.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+
+          return Column(
+            children: documentos.map((clubeDoc) {
+              final dadosClube = clubeDoc.data();
+
+              final competicoes = FirebaseFirestore.instance
+                  .collection('clubes')
+                  .doc(clubeDoc.id)
+                  .collection('competicoes')
+                  .orderBy('criadoEm', descending: true);
+
+              return StreamBuilder<
+                  QuerySnapshot<Map<String, dynamic>>>(
+                stream: competicoes.snapshots(),
+                builder: (context, competicaoSnapshot) {
+                  if (competicaoSnapshot.hasError) {
+                    return const Card(
+                      child: ListTile(
+                        title: Text(
+                          'Erro ao carregar competições.',
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (!competicaoSnapshot.hasData) {
+                    return const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: LinearProgressIndicator(),
+                    );
+                  }
+
+                  final lista = competicaoSnapshot.data!.docs;
+
+                  if (lista.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
+                        child: Text(
+                          dadosClube['nome'] ?? 'Meu clube',
+                          style: const TextStyle(
+                            color: cafe,
+                            fontSize: 19,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      ...lista.map((competicaoDoc) {
+                        final dados = competicaoDoc.data();
+                        final modalidade =
+                            dados['modalidade'] as String? ?? '';
+
+                        final unidade =
+                            modalidade == 'mais_consistente'
+                                ? 'dias'
+                                : 'páginas';
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(14),
+                            leading: const CircleAvatar(
+                              backgroundColor: Color(0xFFE7D7C2),
+                              child: Icon(
+                                Icons.emoji_events_rounded,
+                                color: cafe,
+                              ),
+                            ),
+                            title: Text(
+                              dados['nome'] ?? 'Competição',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                '${modalidadeTexto(modalidade)}\n'
+                                'Meta: ${dados['metaValor'] ?? 0} $unidade',
+                              ),
+                            ),
+                            isThreeLine: true,
+                            trailing: const Icon(
+                              Icons.chevron_right,
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ClubeDetalhesPage(
+                                    clubeId: clubeDoc.id,
+                                    clube: dadosClube,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      }),
+
+                      const SizedBox(height: 12),
+                    ],
+                  );
+                },
+              );
+            }).toList(),
+          );
+        },
+      ),
+    ],
+  );
+}
 
   Widget clubesPage() {
     return SingleChildScrollView(
@@ -594,8 +708,10 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          ClubeDetalhesPage(clube: documento.data()),
+                      builder: (context) => ClubeDetalhesPage(
+                        clubeId: documento.id,
+                        clube: documento.data(),
+                      ),
                     ),
                   );
                 },
