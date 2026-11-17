@@ -8,6 +8,7 @@ import 'clube_detalhes_page.dart';
 import 'criar_clube_page.dart';
 import 'login_page.dart';
 import 'meus_livros_page.dart';
+import 'livros_competicao_page.dart';
 import 'leitura_service.dart';
 
 class ReadlyHomePage extends StatefulWidget {
@@ -134,434 +135,386 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
     );
   }
 
-  
-Widget inicioPage() {
-  const cafe = Color(0xFF5D4037);
-  const marrom = Color(0xFF795548);
-  const caramelo = Color(0xFFA67C52);
-  const papel = Color(0xFFFFFCF7);
-  const borda = Color(0xFFD8C7AE);
+  Widget inicioPage() {
+    const cafe = Color(0xFF5D4037);
+    const marrom = Color(0xFF795548);
+    const caramelo = Color(0xFFA67C52);
+    const papel = Color(0xFFFFFCF7);
+    const borda = Color(0xFFD8C7AE);
 
-  final usuario = FirebaseAuth.instance.currentUser;
-  final nomeCompleto = usuario?.displayName?.trim() ?? '';
-  final primeiroNome = nomeCompleto.isEmpty
-      ? 'leitor'
-      : nomeCompleto.split(' ').first;
+    final usuario = FirebaseAuth.instance.currentUser;
+    final nomeCompleto = usuario?.displayName?.trim() ?? '';
+    final primeiroNome = nomeCompleto.isEmpty
+        ? 'leitor'
+        : nomeCompleto.split(' ').first;
 
-  Widget indicador(
-    IconData icone,
-    String valor,
-    String titulo,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: papel,
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: borda),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icone, color: caramelo, size: 25),
-          const SizedBox(height: 12),
-          Text(
-            valor,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: cafe,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            titulo,
-            style: const TextStyle(
-              fontSize: 12,
-              color: marrom,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget abrirBiblioteca() {
-    return TextButton(
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const MeusLivrosPage(),
-          ),
-        );
-      },
-      child: const Text('Ver todos'),
-    );
-  }
-
-  return ListView(
-    padding: const EdgeInsets.all(20),
-    children: [
-      const Text(
-        'SUA JORNADA LITERÁRIA',
-        style: TextStyle(
-          color: marrom,
-          fontSize: 11,
-          letterSpacing: 2,
-          fontWeight: FontWeight.bold,
+    Widget indicador(IconData icone, String valor, String titulo) {
+      return Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: papel,
+          borderRadius: BorderRadius.circular(17),
+          border: Border.all(color: borda),
         ),
-      ),
-      const SizedBox(height: 10),
-      Text(
-        'Olá, $primeiroNome!',
-        style: const TextStyle(
-          fontSize: 28,
-          color: cafe,
-          fontWeight: FontWeight.bold,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icone, color: caramelo, size: 25),
+            const SizedBox(height: 12),
+            Text(
+              valor,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: cafe,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(titulo, style: const TextStyle(fontSize: 12, color: marrom)),
+          ],
         ),
-      ),
-      const SizedBox(height: 6),
-      const Text(
-        'Cada página faz parte da sua história.',
-        style: TextStyle(color: marrom, fontSize: 14),
-      ),
-      const SizedBox(height: 24),
+      );
+    }
 
-      // Indicadores reais do Firestore
-      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: LeituraService.observarLivros(),
-        builder: (context, livrosSnapshot) {
-          return StreamBuilder<
-              QuerySnapshot<Map<String, dynamic>>>(
-            stream: LeituraService.observarLeituras(),
-            builder: (context, leiturasSnapshot) {
-              if (livrosSnapshot.hasError ||
-                  leiturasSnapshot.hasError) {
-                return const Text(
-                  'Não foi possível carregar as estatísticas.',
-                );
-              }
-
-              if (!livrosSnapshot.hasData ||
-                  !leiturasSnapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
-              }
-
-              final livros = livrosSnapshot.data!.docs;
-              final leituras = leiturasSnapshot.data!.docs;
-
-              final paginasLidas = leituras.fold<int>(
-                0,
-                (soma, doc) =>
-                    soma +
-                    ((doc.data()['paginasLidas'] as num?)
-                            ?.toInt() ??
-                        0),
-              );
-
-              final concluidos = livros.where((doc) {
-                return doc.data()['status'] == 'concluido';
-              }).length;
-
-              final ofensiva = LeituraService.calcularOfensiva(
-                leituras.map((doc) => doc.data()),
-              );
-
-              return StreamBuilder<
-                  QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance
-                    .collection('clubes')
-                    .where(
-                      'participantes',
-                      arrayContains: usuario!.uid,
-                    )
-                    .snapshots(),
-                builder: (context, clubesSnapshot) {
-                  if (clubesSnapshot.hasError) {
-                    return const Text(
-                      'Erro ao carregar informações dos clubes.',
-                    );
-                  }
-
-                  if (!clubesSnapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-
-                  final clubes = clubesSnapshot.data!.docs;
-
-                  return FutureBuilder<int>(
-                    future: contarCompeticoesAtivas(clubes),
-                    builder: (context, competicoesSnapshot) {
-                      final quantidadeCompeticoes =
-                          competicoesSnapshot.data ?? 0;
-
-                      if (competicoesSnapshot.hasError) {
-                        return const Text(
-                          'Erro ao carregar as competições.',
-                        );
-                      }
-
-                      final dados = [
-                        (
-                          Icons.local_fire_department_rounded,
-                          '$ofensiva dias',
-                          'Ofensiva'
-                        ),
-                        (
-                          Icons.menu_book_rounded,
-                          '$paginasLidas',
-                          'Páginas lidas'
-                        ),
-                        (
-                          Icons.check_circle_outline,
-                          '$concluidos',
-                          'Livros concluídos'
-                        ),
-                        (
-                          Icons.emoji_events_outlined,
-                          competicoesSnapshot.hasData
-                              ? '$quantidadeCompeticoes'
-                              : '...',
-                          'Competições ativas'
-                        ),
-                        (
-                          Icons.groups_rounded,
-                          '${clubes.length}',
-                          'Clubes participantes'
-                        ),
-                      ];
-
-                      return LayoutBuilder(
-                        builder: (context, constraints) {
-                          final largura =
-                              (constraints.maxWidth - 12) / 2;
-
-                          return Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              for (int i = 0; i < dados.length; i++)
-                                SizedBox(
-                                  width: i == 4
-                                      ? constraints.maxWidth
-                                      : largura,
-                                  child: indicador(
-                                    dados[i].$1,
-                                    dados[i].$2,
-                                    dados[i].$3,
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              );
-            },
+    Widget abrirBiblioteca() {
+      return TextButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MeusLivrosPage()),
           );
         },
-      ),
+        child: const Text('Ver todos'),
+      );
+    }
 
-      const SizedBox(height: 30),
-
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Minhas leituras',
-            style: TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.bold,
-              color: cafe,
-            ),
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Text(
+          'SUA JORNADA LITERÁRIA',
+          style: TextStyle(
+            color: marrom,
+            fontSize: 11,
+            letterSpacing: 2,
+            fontWeight: FontWeight.bold,
           ),
-          abrirBiblioteca(),
-        ],
-      ),
-
-      const SizedBox(height: 8),
-
-      const Text(
-        'Continue de onde você parou.',
-        style: TextStyle(
-          color: marrom,
-          fontSize: 13,
         ),
-      ),
+        const SizedBox(height: 10),
+        Text(
+          'Olá, $primeiroNome!',
+          style: const TextStyle(
+            fontSize: 28,
+            color: cafe,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Cada página faz parte da sua história.',
+          style: TextStyle(color: marrom, fontSize: 14),
+        ),
+        const SizedBox(height: 24),
 
-      const SizedBox(height: 16),
+        // Indicadores reais do Firestore
+        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: LeituraService.observarLivros(),
+          builder: (context, livrosSnapshot) {
+            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: LeituraService.observarLeituras(),
+              builder: (context, leiturasSnapshot) {
+                if (livrosSnapshot.hasError || leiturasSnapshot.hasError) {
+                  return const Text(
+                    'Não foi possível carregar as estatísticas.',
+                  );
+                }
 
-      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: LeituraService.observarLivros(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Text('Erro ao carregar livros.');
-          }
+                if (!livrosSnapshot.hasData || !leiturasSnapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+                final livros = livrosSnapshot.data!.docs;
+                final leituras = leiturasSnapshot.data!.docs;
 
-          final livros = snapshot.data!.docs
-              .where(
-                (doc) => doc.data()['status'] == 'lendo',
-              )
-              .take(3)
-              .toList();
+                final paginasLidas = leituras.fold<int>(
+                  0,
+                  (soma, doc) =>
+                      soma +
+                      ((doc.data()['paginasLidas'] as num?)?.toInt() ?? 0),
+                );
 
-          if (livros.isEmpty) {
-            return Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: papel,
-                borderRadius: BorderRadius.circular(19),
-                border: Border.all(color: borda),
-              ),
-              child: const Column(
-                children: [
-                  Icon(
-                    Icons.auto_stories_rounded,
-                    color: caramelo,
-                    size: 43,
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'Nenhuma leitura em andamento',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: cafe,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Escolha um livro na biblioteca para começar.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: marrom),
-                  ),
-                ],
-              ),
-            );
-          }
+                final concluidos = livros.where((doc) {
+                  return doc.data()['status'] == 'concluido';
+                }).length;
 
-          return Column(
-            children: livros.map((documento) {
-              final dados = documento.data();
+                final ofensiva = LeituraService.calcularOfensiva(
+                  leituras.map((doc) => doc.data()),
+                );
 
-              final total =
-                  (dados['totalPaginas'] as num?)?.toInt() ?? 1;
-              final atual =
-                  (dados['paginaAtual'] as num?)?.toInt() ?? 0;
-              final progresso =
-                  total > 0 ? (atual / total).clamp(0.0, 1.0) : 0.0;
+                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('clubes')
+                      .where('participantes', arrayContains: usuario!.uid)
+                      .snapshots(),
+                  builder: (context, clubesSnapshot) {
+                    if (clubesSnapshot.hasError) {
+                      return const Text(
+                        'Erro ao carregar informações dos clubes.',
+                      );
+                    }
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 65,
-                            height: 88,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE7D7C2),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.book_rounded,
-                              color: cafe,
-                              size: 34,
-                            ),
+                    if (!clubesSnapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final clubes = clubesSnapshot.data!.docs;
+
+                    return FutureBuilder<int>(
+                      future: contarCompeticoesAtivas(clubes),
+                      builder: (context, competicoesSnapshot) {
+                        final quantidadeCompeticoes =
+                            competicoesSnapshot.data ?? 0;
+
+                        if (competicoesSnapshot.hasError) {
+                          return const Text('Erro ao carregar as competições.');
+                        }
+
+                        final dados = [
+                          (
+                            Icons.local_fire_department_rounded,
+                            '$ofensiva dias',
+                            'Ofensiva',
                           ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                          (
+                            Icons.menu_book_rounded,
+                            '$paginasLidas',
+                            'Páginas lidas',
+                          ),
+                          (
+                            Icons.check_circle_outline,
+                            '$concluidos',
+                            'Livros concluídos',
+                          ),
+                          (
+                            Icons.emoji_events_outlined,
+                            competicoesSnapshot.hasData
+                                ? '$quantidadeCompeticoes'
+                                : '...',
+                            'Competições ativas',
+                          ),
+                          (
+                            Icons.groups_rounded,
+                            '${clubes.length}',
+                            'Clubes participantes',
+                          ),
+                        ];
+
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            final largura = (constraints.maxWidth - 12) / 2;
+
+                            return Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
                               children: [
-                                Text(
-                                  dados['titulo'] ?? '',
-                                  style: const TextStyle(
-                                    color: cafe,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                for (int i = 0; i < dados.length; i++)
+                                  SizedBox(
+                                    width: i == 4
+                                        ? constraints.maxWidth
+                                        : largura,
+                                    child: indicador(
+                                      dados[i].$1,
+                                      dados[i].$2,
+                                      dados[i].$3,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  dados['autor'] ?? '',
-                                  style: const TextStyle(
-                                    color: marrom,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                LinearProgressIndicator(
-                                  value: progresso,
-                                  minHeight: 7,
-                                  borderRadius:
-                                      BorderRadius.circular(7),
-                                  backgroundColor:
-                                      const Color(0xFFE7D7C2),
-                                  color: marrom,
-                                ),
-                                const SizedBox(height: 7),
-                                Text(
-                                  '$atual/$total páginas • '
-                                  '${(progresso * 100).round()}%',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: marrom,
-                                  ),
-                                ),
                               ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const MeusLivrosPage(),
-                              ),
                             );
                           },
-                          icon: const Icon(
-                            Icons.arrow_forward_rounded,
-                          ),
-                          label: const Text('Continuar leitura'),
-                        ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            );
+          },
+        ),
+
+        const SizedBox(height: 30),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Minhas leituras',
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.bold,
+                color: cafe,
+              ),
+            ),
+            abrirBiblioteca(),
+          ],
+        ),
+
+        const SizedBox(height: 8),
+
+        const Text(
+          'Continue de onde você parou.',
+          style: TextStyle(color: marrom, fontSize: 13),
+        ),
+
+        const SizedBox(height: 16),
+
+        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: LeituraService.observarLivros(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Text('Erro ao carregar livros.');
+            }
+
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final livros = snapshot.data!.docs
+                .where((doc) => doc.data()['status'] == 'lendo')
+                .take(3)
+                .toList();
+
+            if (livros.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: papel,
+                  borderRadius: BorderRadius.circular(19),
+                  border: Border.all(color: borda),
+                ),
+                child: const Column(
+                  children: [
+                    Icon(Icons.auto_stories_rounded, color: caramelo, size: 43),
+                    SizedBox(height: 12),
+                    Text(
+                      'Nenhuma leitura em andamento',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: cafe,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Escolha um livro na biblioteca para começar.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: marrom),
+                    ),
+                  ],
                 ),
               );
-            }).toList(),
-          );
-        },
-      ),
-    ],
-  );
-}
+            }
 
+            return Column(
+              children: livros.map((documento) {
+                final dados = documento.data();
+
+                final total = (dados['totalPaginas'] as num?)?.toInt() ?? 1;
+                final atual = (dados['paginaAtual'] as num?)?.toInt() ?? 0;
+                final progresso = total > 0
+                    ? (atual / total).clamp(0.0, 1.0)
+                    : 0.0;
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 65,
+                              height: 88,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE7D7C2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.book_rounded,
+                                color: cafe,
+                                size: 34,
+                              ),
+                            ),
+                            const SizedBox(width: 15),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    dados['titulo'] ?? '',
+                                    style: const TextStyle(
+                                      color: cafe,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    dados['autor'] ?? '',
+                                    style: const TextStyle(
+                                      color: marrom,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  LinearProgressIndicator(
+                                    value: progresso,
+                                    minHeight: 7,
+                                    borderRadius: BorderRadius.circular(7),
+                                    backgroundColor: const Color(0xFFE7D7C2),
+                                    color: marrom,
+                                  ),
+                                  const SizedBox(height: 7),
+                                  Text(
+                                    '$atual/$total páginas • '
+                                    '${(progresso * 100).round()}%',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: marrom,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const MeusLivrosPage(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.arrow_forward_rounded),
+                            label: const Text('Continuar leitura'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
 
   Widget estatisticaCard(IconData icone, String valor, String descricao) {
     const cafe = Color(0xFF5D4037);
@@ -767,13 +720,17 @@ Widget inicioPage() {
                               ),
                               isThreeLine: true,
                               trailing: const Icon(Icons.chevron_right),
+
                               onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => ClubeDetalhesPage(
+                                    builder: (_) => LivrosCompeticaoPage(
                                       clubeId: clubeDoc.id,
-                                      clube: dadosClube,
+                                      competicaoId: competicaoDoc.id,
+                                      nomeCompeticao:
+                                          dados['nome'] as String? ??
+                                          'Competição',
                                     ),
                                   ),
                                 );
