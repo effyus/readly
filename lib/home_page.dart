@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'competicao_detalhes_page.dart';
 import 'meus_livros_page.dart';
 import 'clube_detalhes_page.dart';
 import 'criar_clube_page.dart';
 import 'login_page.dart';
-import 'meus_livros_page.dart';
+
 import 'livros_competicao_page.dart';
 import 'leitura_service.dart';
 
@@ -725,12 +726,9 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => LivrosCompeticaoPage(
+                                    builder: (_) => CompeticaoDetalhesPage(
                                       clubeId: clubeDoc.id,
                                       competicaoId: competicaoDoc.id,
-                                      nomeCompeticao:
-                                          dados['nome'] as String? ??
-                                          'Competição',
                                     ),
                                   ),
                                 );

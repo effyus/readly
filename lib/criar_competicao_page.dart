@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'ranking_competicao_page.dart';
 class CriarCompeticaoPage extends StatefulWidget {
   final String clubeId;
 

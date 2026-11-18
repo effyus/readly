@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'ranking_competicao_page.dart';
 import 'leitura_service.dart';
 import 'meus_livros_page.dart';
 
@@ -66,7 +67,9 @@ class LivrosCompeticaoPage extends StatelessWidget {
       if (jaExiste) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Este livro já está na sua biblioteca.')),
+            const SnackBar(
+              content: Text('Este livro já está na sua biblioteca.'),
+            ),
           );
         }
         return;
@@ -92,7 +95,28 @@ class LivrosCompeticaoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: papel,
-      appBar: AppBar(title: Text('Livros • $nomeCompeticao')),
+
+      appBar: AppBar(
+        title: Text(nomeCompeticao),
+        actions: [
+          IconButton(
+            tooltip: 'Ver ranking',
+            icon: const Icon(Icons.emoji_events_rounded),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RankingCompeticaoPage(
+                    clubeId: clubeId,
+                    competicaoId: competicaoId,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: _clube.snapshots(),
         builder: (context, clubeSnapshot) {
@@ -124,9 +148,14 @@ class LivrosCompeticaoPage extends StatelessWidget {
               return ListView(
                 padding: const EdgeInsets.all(18),
                 children: [
-                  const Text('Livros da competição', style: TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.bold, color: cafe,
-                  )),
+                  const Text(
+                    'Livros da competição',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: cafe,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   const Text(
                     'Adicione à sua biblioteca para acompanhar o progresso. '
@@ -143,10 +172,12 @@ class LivrosCompeticaoPage extends StatelessWidget {
                   ],
                   const SizedBox(height: 16),
                   if (documentos.isEmpty)
-                    const Card(child: Padding(
-                      padding: EdgeInsets.all(22),
-                      child: Text('Nenhum livro compartilhado ainda.'),
-                    )),
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(22),
+                        child: Text('Nenhum livro compartilhado ainda.'),
+                      ),
+                    ),
                   for (final documento in documentos)
                     Card(
                       child: Padding(
@@ -154,30 +185,50 @@ class LivrosCompeticaoPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(children: [
-                              const Icon(Icons.menu_book_rounded, color: cafe, size: 34),
-                              const SizedBox(width: 12),
-                              Expanded(child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(documento.data()['titulo'] ?? 'Livro',
-                                      style: const TextStyle(fontWeight: FontWeight.bold,
-                                          fontSize: 16, color: cafe)),
-                                  const SizedBox(height: 4),
-                                  Text('${documento.data()['autor'] ?? ''} • '
-                                      '${documento.data()['totalPaginas'] ?? 0} páginas',
-                                      style: const TextStyle(color: marrom)),
-                                ],
-                              )),
-                            ]),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.menu_book_rounded,
+                                  color: cafe,
+                                  size: 34,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        documento.data()['titulo'] ?? 'Livro',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: cafe,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${documento.data()['autor'] ?? ''} • '
+                                        '${documento.data()['totalPaginas'] ?? 0} páginas',
+                                        style: const TextStyle(color: marrom),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
                                 onPressed: () => _adicionarBiblioteca(
-                                    context, documento.data()),
+                                  context,
+                                  documento.data(),
+                                ),
                                 icon: const Icon(Icons.library_add_outlined),
-                                label: const Text('Adicionar à minha biblioteca'),
+                                label: const Text(
+                                  'Adicionar à minha biblioteca',
+                                ),
                               ),
                             ),
                           ],
@@ -186,8 +237,10 @@ class LivrosCompeticaoPage extends StatelessWidget {
                     ),
                   const SizedBox(height: 10),
                   TextButton.icon(
-                    onPressed: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const MeusLivrosPage())),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MeusLivrosPage()),
+                    ),
                     icon: const Icon(Icons.library_books_outlined),
                     label: const Text('Abrir minha biblioteca'),
                   ),
@@ -231,7 +284,10 @@ class _NovoLivroCompeticaoDialogState
     if (salvando || !formKey.currentState!.validate()) return;
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    setState(() { salvando = true; erro = null; });
+    setState(() {
+      salvando = true;
+      erro = null;
+    });
     try {
       await widget.livros.add({
         'titulo': titulo.text.trim(),
@@ -254,39 +310,52 @@ class _NovoLivroCompeticaoDialogState
       title: const Text('Novo livro da competição'),
       content: Form(
         key: formKey,
-        child: SingleChildScrollView(child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(controller: titulo,
-              decoration: const InputDecoration(labelText: 'Título'),
-              validator: (v) => v == null || v.trim().isEmpty
-                  ? 'Informe o título' : null),
-            const SizedBox(height: 12),
-            TextFormField(controller: autor,
-              decoration: const InputDecoration(labelText: 'Autor'),
-              validator: (v) => v == null || v.trim().isEmpty
-                  ? 'Informe o autor' : null),
-            const SizedBox(height: 12),
-            TextFormField(controller: paginas,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Total de páginas'),
-              validator: (v) {
-                final n = int.tryParse(v?.trim() ?? '');
-                return n == null || n <= 0
-                    ? 'Informe um total válido' : null;
-              }),
-            if (erro != null) ...[
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: titulo,
+                decoration: const InputDecoration(labelText: 'Título'),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Informe o título' : null,
+              ),
               const SizedBox(height: 12),
-              Text(erro!, style: const TextStyle(color: Colors.red)),
+              TextFormField(
+                controller: autor,
+                decoration: const InputDecoration(labelText: 'Autor'),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Informe o autor' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: paginas,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Total de páginas',
+                ),
+                validator: (v) {
+                  final n = int.tryParse(v?.trim() ?? '');
+                  return n == null || n <= 0 ? 'Informe um total válido' : null;
+                },
+              ),
+              if (erro != null) ...[
+                const SizedBox(height: 12),
+                Text(erro!, style: const TextStyle(color: Colors.red)),
+              ],
             ],
-          ],
-        )),
+          ),
+        ),
       ),
       actions: [
-        TextButton(onPressed: salvando ? null : () => Navigator.pop(context),
-            child: const Text('Cancelar')),
-        FilledButton(onPressed: salvando ? null : salvar,
-            child: Text(salvando ? 'Salvando...' : 'Cadastrar')),
+        TextButton(
+          onPressed: salvando ? null : () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: salvando ? null : salvar,
+          child: Text(salvando ? 'Salvando...' : 'Cadastrar'),
+        ),
       ],
     );
   }
