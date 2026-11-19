@@ -879,7 +879,7 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ClubeDetalhesPage(
+                      builder: (_) => ClubeDetalhesPage(
                         clubeId: documento.id,
                         clube: documento.data(),
                       ),
