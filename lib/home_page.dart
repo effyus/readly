@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'entrar_clube_page.dart';
 import 'competicao_detalhes_page.dart';
 import 'meus_livros_page.dart';
 import 'clube_detalhes_page.dart';
@@ -777,6 +778,25 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
               padding: const EdgeInsets.all(16),
             ),
           ),
+
+          const SizedBox(height: 12),
+
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EntrarClubePage()),
+              );
+            },
+            icon: const Icon(Icons.login_rounded),
+            label: const Text('Entrar em um clube'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: marrom,
+              padding: const EdgeInsets.all(16),
+              side: BorderSide(color: marrom),
+            ),
+          ),
+
           const SizedBox(height: 24),
 
           clubesDoUsuario(),

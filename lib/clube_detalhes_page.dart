@@ -104,9 +104,7 @@ class ClubeDetalhesPage extends StatelessWidget {
       titulo: 'Excluir clube?',
       mensagem:
           'O clube deixará de aparecer para todos os '
-          'participantes. As competições e os registros '
-          'serão preservados no Firebase para manter '
-          'o histórico. Esta ação não poderá ser '
+          'participantes. Esta ação não poderá ser '
           'desfeita pelo aplicativo.',
       acao: 'Excluir clube',
     );
