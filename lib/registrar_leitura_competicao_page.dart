@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -24,9 +23,7 @@ class RegistrarLeituraCompeticaoPage extends StatelessWidget {
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
     if (uid == null) {
-      return const Scaffold(
-        body: Center(child: Text('Faça login novamente.')),
-      );
+      return const Scaffold(body: Center(child: Text('Faça login novamente.')));
     }
 
     final competicaoRef = FirebaseFirestore.instance
@@ -37,14 +34,9 @@ class RegistrarLeituraCompeticaoPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: fundo,
-      appBar: AppBar(
-        title: const Text('Registrar leitura'),
-      ),
+      appBar: AppBar(title: const Text('Registrar leitura')),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: competicaoRef
-            .collection('participantes')
-            .doc(uid)
-            .snapshots(),
+        stream: competicaoRef.collection('participantes').doc(uid).snapshots(),
         builder: (context, inscricaoSnapshot) {
           if (inscricaoSnapshot.hasError) {
             return const Center(
@@ -53,9 +45,7 @@ class RegistrarLeituraCompeticaoPage extends StatelessWidget {
           }
 
           if (!inscricaoSnapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (!inscricaoSnapshot.data!.exists) {
@@ -71,8 +61,7 @@ class RegistrarLeituraCompeticaoPage extends StatelessWidget {
             );
           }
 
-          return StreamBuilder<
-              QuerySnapshot<Map<String, dynamic>>>(
+          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: competicaoRef
                 .collection('livros')
                 .orderBy('criadoEm', descending: true)
@@ -85,23 +74,18 @@ class RegistrarLeituraCompeticaoPage extends StatelessWidget {
               }
 
               if (!oficiaisSnapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
+                return const Center(child: CircularProgressIndicator());
               }
 
               final oficiais = oficiaisSnapshot.data!.docs;
 
               if (oficiais.isEmpty) {
                 return const Center(
-                  child: Text(
-                    'A competição ainda não possui livros oficiais.',
-                  ),
+                  child: Text('A competição ainda não possui livros oficiais.'),
                 );
               }
 
-              return StreamBuilder<
-                  QuerySnapshot<Map<String, dynamic>>>(
+              return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: LeituraService.observarLivros(),
                 builder: (context, bibliotecaSnapshot) {
                   if (bibliotecaSnapshot.hasError) {
@@ -111,9 +95,7 @@ class RegistrarLeituraCompeticaoPage extends StatelessWidget {
                   }
 
                   if (!bibliotecaSnapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
+                    return const Center(child: CircularProgressIndicator());
                   }
 
                   final biblioteca = {
@@ -148,23 +130,19 @@ class RegistrarLeituraCompeticaoPage extends StatelessWidget {
 
                             final pessoal = biblioteca[livroId];
                             final dados = oficial.data();
-                            final atual = (pessoal?['paginaAtual']
-                                    as num?)
-                                ?.toInt() ?? 0;
-                            final total = (pessoal?['totalPaginas']
-                                    as num?)
-                                ?.toInt() ?? 0;
+                            final atual =
+                                (pessoal?['paginaAtual'] as num?)?.toInt() ?? 0;
+                            final total =
+                                (pessoal?['totalPaginas'] as num?)?.toInt() ??
+                                0;
 
                             final concluido =
-                                pessoal != null &&
-                                total > 0 &&
-                                atual >= total;
+                                pessoal != null && total > 0 && atual >= total;
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
-                                contentPadding:
-                                    const EdgeInsets.all(14),
+                                contentPadding: const EdgeInsets.all(14),
                                 leading: _Capa(
                                   url: dados['capaUrl'] as String?,
                                 ),
@@ -179,15 +157,15 @@ class RegistrarLeituraCompeticaoPage extends StatelessWidget {
                                   pessoal == null
                                       ? 'Sincronize os livros oficiais'
                                       : concluido
-                                          ? 'Leitura concluída'
-                                          : '$atual de $total páginas',
+                                      ? 'Leitura concluída'
+                                      : '$atual de $total páginas',
                                 ),
                                 trailing: Icon(
                                   pessoal == null
                                       ? Icons.sync
                                       : concluido
-                                          ? Icons.check_circle
-                                          : Icons.chevron_right,
+                                      ? Icons.check_circle
+                                      : Icons.chevron_right,
                                   color: marrom,
                                 ),
                                 onTap: pessoal == null || concluido
@@ -200,8 +178,8 @@ class RegistrarLeituraCompeticaoPage extends StatelessWidget {
                                             competicaoId: competicaoId,
                                             livroOficialId: oficial.id,
                                             livroId: livroId,
-                                            titulo: dados['titulo']
-                                                    as String? ??
+                                            titulo:
+                                                dados['titulo'] as String? ??
                                                 'Livro',
                                             paginaAtual: atual,
                                             totalPaginas: total,
@@ -243,10 +221,7 @@ class _Capa extends StatelessWidget {
                 errorBuilder: (_, _, _) =>
                     const Icon(Icons.book, color: Color(0xFF795548)),
               )
-            : const Icon(
-                Icons.book,
-                color: Color(0xFF795548),
-              ),
+            : const Icon(Icons.book, color: Color(0xFF795548)),
       ),
     );
   }
@@ -272,8 +247,7 @@ class _RegistroDialog extends StatefulWidget {
   });
 
   @override
-  State<_RegistroDialog> createState() =>
-      _RegistroDialogState();
+  State<_RegistroDialog> createState() => _RegistroDialogState();
 }
 
 class _RegistroDialogState extends State<_RegistroDialog> {
@@ -284,9 +258,7 @@ class _RegistroDialogState extends State<_RegistroDialog> {
   @override
   void initState() {
     super.initState();
-    pagina = TextEditingController(
-      text: widget.paginaAtual.toString(),
-    );
+    pagina = TextEditingController(text: widget.paginaAtual.toString());
   }
 
   @override
@@ -303,7 +275,8 @@ class _RegistroDialogState extends State<_RegistroDialog> {
         novaPagina <= widget.paginaAtual ||
         novaPagina > widget.totalPaginas) {
       setState(() {
-        erro = 'Informe uma página entre '
+        erro =
+            'Informe uma página entre '
             '${widget.paginaAtual + 1} e '
             '${widget.totalPaginas}.';
       });
@@ -325,15 +298,13 @@ class _RegistroDialogState extends State<_RegistroDialog> {
           .collection('competicoes')
           .doc(widget.competicaoId);
 
-      final inscricaoRef =
-          competicaoRef.collection('participantes').doc(uid);
+      final inscricaoRef = competicaoRef.collection('participantes').doc(uid);
 
       final oficialRef = competicaoRef
           .collection('livros')
           .doc(widget.livroOficialId);
 
-      final pessoalRef =
-          LeituraService.livros.doc(widget.livroId);
+      final pessoalRef = LeituraService.livros.doc(widget.livroId);
 
       final leituraRef = LeituraService.leituras.doc();
 
@@ -343,106 +314,111 @@ class _RegistroDialogState extends State<_RegistroDialog> {
 
       final hoje = LeituraService.diaLocal(DateTime.now());
 
-      final paginas = await firestore.runTransaction<int>(
-        (tx) async {
-          // Todas as leituras vêm antes das escritas.
-          final inscricao = await tx.get(inscricaoRef);
-          final competicao = await tx.get(competicaoRef);
-          final oficial = await tx.get(oficialRef);
-          final pessoal = await tx.get(pessoalRef);
+      final paginas = await firestore.runTransaction<int>((tx) async {
+        // Todas as leituras vêm antes das escritas.
+        final inscricao = await tx.get(inscricaoRef);
+        final competicao = await tx.get(competicaoRef);
+        final oficial = await tx.get(oficialRef);
+        final pessoal = await tx.get(pessoalRef);
 
-          if (!inscricao.exists) {
-            throw StateError('Você não está inscrito.');
-          }
+        if (!inscricao.exists) {
+          throw StateError('Você não está inscrito.');
+        }
 
-          if (!competicao.exists || !oficial.exists ||
-              !pessoal.exists) {
-            throw StateError('Livro ou competição não encontrado.');
-          }
+        if (!competicao.exists || !oficial.exists || !pessoal.exists) {
+          throw StateError('Livro ou competição não encontrado.');
+        }
 
-          final dadosComp = competicao.data()!;
-          final inicioCampo = dadosComp['criadoEm'];
-          final duracao =
-              (dadosComp['duracaoDias'] as num?)?.toInt() ?? 0;
+        final dadosComp = competicao.data()!;
+        final inicioCampo = dadosComp['criadoEm'];
+        final duracao = (dadosComp['duracaoDias'] as num?)?.toInt() ?? 0;
 
-          if (inicioCampo is! Timestamp || duracao <= 0) {
-            throw StateError('Período da competição inválido.');
-          }
+        if (inicioCampo is! Timestamp || duracao <= 0) {
+          throw StateError('Período da competição inválido.');
+        }
 
-          final inicio = inicioCampo.toDate();
-          final fim = inicio.add(Duration(days: duracao));
-          final agora = DateTime.now();
+        final inicio = inicioCampo.toDate();
+        final fim = inicio.add(Duration(days: duracao));
+        final agora = DateTime.now();
 
-          final status = dadosComp['status'] as String?;
+        final status = dadosComp['status'] as String?;
 
-          if (agora.isBefore(inicio) ||
-              !agora.isBefore(fim) ||
-              ['concluida', 'cancelada', 'agendada']
-                  .contains(status)) {
-            throw StateError('A competição não está ativa.');
-          }
+        if (agora.isBefore(inicio) ||
+            !agora.isBefore(fim) ||
+            ['concluida', 'cancelada', 'agendada'].contains(status)) {
+          throw StateError('A competição não está ativa.');
+        }
 
-          final dadosLivro = pessoal.data()!;
-          final anterior =
-              (dadosLivro['paginaAtual'] as num?)?.toInt() ?? 0;
-          final total =
-              (dadosLivro['totalPaginas'] as num?)?.toInt() ?? 0;
+        final dadosLivro = pessoal.data()!;
+        final anterior = (dadosLivro['paginaAtual'] as num?)?.toInt() ?? 0;
+        final total = (dadosLivro['totalPaginas'] as num?)?.toInt() ?? 0;
 
-          if (novaPagina <= anterior || novaPagina > total) {
-            throw StateError(
-              'O progresso mudou. Feche e abra novamente.',
-            );
-          }
+        if (novaPagina <= anterior || novaPagina > total) {
+          throw StateError('O progresso mudou. Feche e abra novamente.');
+        }
 
-          final quantidade = novaPagina - anterior;
+        final quantidade = novaPagina - anterior;
 
-          tx.update(pessoalRef, {
-            'paginaAtual': novaPagina,
-            'status': novaPagina == total
-                ? 'concluido'
-                : 'lendo',
-          });
+        tx.update(pessoalRef, {
+          'paginaAtual': novaPagina,
+          'status': novaPagina == total ? 'concluido' : 'lendo',
+        });
 
-          tx.set(leituraRef, {
-            'livroId': widget.livroId,
-            'paginaAnterior': anterior,
-            'paginaAtual': novaPagina,
-            'paginasLidas': quantidade,
-            'diaLocal': hoje,
-            'criadoEm': FieldValue.serverTimestamp(),
-          });
+        tx.set(leituraRef, {
+          'livroId': widget.livroId,
+          'paginaAnterior': anterior,
+          'paginaAtual': novaPagina,
+          'paginasLidas': quantidade,
+          'diaLocal': hoje,
+          'criadoEm': FieldValue.serverTimestamp(),
+        });
 
-          tx.set(registroRef, {
-            'usuarioId': uid,
-            'livroId': widget.livroId,
-            'livroOficialId': widget.livroOficialId,
-            'leituraId': leituraRef.id,
-            'paginasLidas': quantidade,
-            'diaLocal': hoje,
-            'criadoEm': FieldValue.serverTimestamp(),
-          });
+        tx.set(registroRef, {
+          'usuarioId': uid,
+          'livroId': widget.livroId,
+          'livroOficialId': widget.livroOficialId,
+          'leituraId': leituraRef.id,
+          'paginasLidas': quantidade,
+          'diaLocal': hoje,
+          'criadoEm': FieldValue.serverTimestamp(),
+        });
 
-          return quantidade;
-        },
-      );
+        return quantidade;
+      });
 
       if (!mounted) return;
 
       Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '+$paginas páginas registradas na competição!',
-          ),
-        ),
+        SnackBar(content: Text('+$paginas páginas registradas na competição!')),
       );
-    } catch (e) {
+    } on FirebaseException catch (e) {
+      debugPrint('===== ERRO FIRESTORE READLY =====');
+      debugPrint('Código: ${e.code}');
+      debugPrint('Mensagem: ${e.message}');
+      debugPrint('Clube: ${widget.clubeId}');
+      debugPrint('Competição: ${widget.competicaoId}');
+      debugPrint('Usuário: ${FirebaseAuth.instance.currentUser?.uid}');
+      debugPrint('===============================');
+
       if (mounted) {
-        setState(() => erro = 'Não foi possível registrar: $e');
+        setState(() {
+          erro = 'Erro do Firestore: ${e.code}\n${e.message ?? ""}';
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao registrar leitura: $e');
+
+      if (mounted) {
+        setState(() {
+          erro = 'Não foi possível registrar: $e';
+        });
       }
     } finally {
-      if (mounted) setState(() => salvando = false);
+      if (mounted) {
+        setState(() => salvando = false);
+      }
     }
   }
 
@@ -469,10 +445,7 @@ class _RegistroDialogState extends State<_RegistroDialog> {
           ),
           if (erro != null) ...[
             const SizedBox(height: 12),
-            Text(
-              erro!,
-              style: const TextStyle(color: Colors.red),
-            ),
+            Text(erro!, style: const TextStyle(color: Colors.red)),
           ],
         ],
       ),
@@ -483,9 +456,7 @@ class _RegistroDialogState extends State<_RegistroDialog> {
         ),
         FilledButton(
           onPressed: salvando ? null : registrar,
-          child: Text(
-            salvando ? 'Registrando...' : 'Registrar leitura',
-          ),
+          child: Text(salvando ? 'Registrando...' : 'Registrar leitura'),
         ),
       ],
     );

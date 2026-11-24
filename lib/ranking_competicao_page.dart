@@ -20,6 +20,103 @@ class RankingCompeticaoPage extends StatelessWidget {
   static const _marrom = Color(0xFF795548);
   static const _papel = Color(0xFFF5EFE3);
 
+Future<void> _editarMeuNome(BuildContext context) async {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return;
+
+  final firestore = FirebaseFirestore.instance;
+  final perfilRef = firestore.collection('usuarios').doc(uid);
+
+  final inscricaoRef = firestore
+      .collection('clubes')
+      .doc(clubeId)
+      .collection('competicoes')
+      .doc(competicaoId)
+      .collection('participantes')
+      .doc(uid);
+
+  try {
+    final resultados = await Future.wait([
+      perfilRef.get(),
+      inscricaoRef.get(),
+    ]);
+
+    if (!resultados[1].exists) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Participe da competição antes de alterar seu nome.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final nomeAtual = (resultados[1].data()?['nome'] ??
+            resultados[0].data()?['nome'] ??
+            '') as String;
+
+    if (!context.mounted) return;
+
+    final controller = TextEditingController(text: nomeAtual);
+
+    final novoNome = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Alterar meu nome'),
+        content: TextField(
+          controller: controller,
+          maxLength: 60,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Nome exibido no ranking',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final nome = controller.text.trim();
+              if (nome.isNotEmpty) {
+                Navigator.pop(dialogContext, nome);
+              }
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (novoNome == null) return;
+
+    // Atualiza o perfil e o nome da inscrição juntos.
+    final batch = firestore.batch();
+    batch.update(perfilRef, {'nome': novoNome});
+    batch.update(inscricaoRef, {'nome': novoNome});
+    await batch.commit();
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Nome atualizado com sucesso!'),
+      ),
+    );
+  } on FirebaseException catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Erro: ${e.code}')),
+    );
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     final competicao = FirebaseFirestore.instance
@@ -143,140 +240,152 @@ class RankingCompeticaoPage extends StatelessWidget {
               };
               final eu = FirebaseAuth.instance.currentUser?.uid;
 
-              return ListView(
-                padding: const EdgeInsets.all(18),
-                children: [
-                  Text(
-                    (dados['nome'] as String?) ?? 'Competição',
-                    style: const TextStyle(
-                      fontSize: 23,
-                      fontWeight: FontWeight.bold,
-                      color: _cafe,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    '$titulo • ${encerrada ? 'Encerrada' : 'Em andamento'}',
-                    style: const TextStyle(color: _marrom),
-                  ),
-                  const SizedBox(height: 20),
-                  if (modalidade == 'meta_coletiva') ...[
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Progresso do grupo',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _cafe,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              '${resultado.paginasColetivas} / $meta páginas',
-                            ),
-                            const SizedBox(height: 9),
+              return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: competicao.collection('participantes').snapshots(),
+                builder: (context, participantesSnapshot) {
+                  final nomes = <String, String>{};
 
-                            Column(
+                  if (participantesSnapshot.hasData) {
+                    for (final participante
+                        in participantesSnapshot.data!.docs) {
+                      final nome =
+                          (participante.data()['nome'] as String? ?? '').trim();
+
+                      if (nome.isNotEmpty) {
+                        nomes[participante.id] = nome;
+                      }
+                    }
+                  }
+
+                  return ListView(
+                    padding: const EdgeInsets.all(18),
+                    children: [
+                      Text(
+                        (dados['nome'] as String?) ?? 'Competição',
+                        style: const TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.bold,
+                          color: _cafe,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        '$titulo • ${encerrada ? 'Encerrada' : 'Em andamento'}',
+                        style: const TextStyle(color: _marrom),
+                      ),
+                      const SizedBox(height: 20),
+                      if (modalidade == 'meta_coletiva') ...[
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                LinearProgressIndicator(
-                                  value: progresso,
-                                  minHeight: 11,
-                                  color: _marrom,
-                                  backgroundColor: const Color(0xFFE7D7C2),
-                                  borderRadius: BorderRadius.circular(8),
+                                const Text(
+                                  'Progresso do grupo',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _cafe,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  '${resultado.paginasColetivas} / $meta páginas',
+                                ),
+                                const SizedBox(height: 9),
+
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    LinearProgressIndicator(
+                                      value: progresso,
+                                      minHeight: 11,
+                                      color: _marrom,
+                                      backgroundColor: const Color(0xFFE7D7C2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+
+                                    const SizedBox(height: 8),
+
+                                    Text(
+                                      '$percentual% da meta concluída',
+                                      style: const TextStyle(
+                                        color: _cafe,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
                                 ),
 
                                 const SizedBox(height: 8),
-
                                 Text(
-                                  '$percentual% da meta concluída',
-                                  style: const TextStyle(
-                                    color: _cafe,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
+                                  resultado.paginasColetivas >= meta && meta > 0
+                                      ? 'Meta alcançada! 🎉'
+                                      : 'Meta ainda não alcançada',
                                 ),
                               ],
                             ),
-
-                            const SizedBox(height: 8),
-                            Text(
-                              resultado.metaAlcancada
-                                  ? 'Meta alcançada!'
-                                  : 'Meta ainda não alcançada',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Contribuição dos participantes',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: _cafe,
-                      ),
-                    ),
-                  ] else
-                    const Text(
-                      'Classificação',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: _cafe,
-                      ),
-                    ),
-                  const SizedBox(height: 10),
-                  if (resultado.ranking.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(22),
-                        child: Text(
-                          'Ainda não há leituras vinculadas a esta competição.',
-                        ),
-                      ),
-                    ),
-                  for (var i = 0; i < resultado.ranking.length; i++)
-                    Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: const Color(0xFFE7D7C2),
-                          child: Text(
-                            '${i + 1}',
-                            style: const TextStyle(color: _cafe),
                           ),
                         ),
-                        title: Text(
-                          resultado.ranking[i].usuarioId == eu
-                              ? 'Você'
-                              : 'Leitor ${resultado.ranking[i].usuarioId.substring(0, resultado.ranking[i].usuarioId.length < 6 ? resultado.ranking[i].usuarioId.length : 6)}',
-                        ),
-                        subtitle: Text(
-                          '${resultado.ranking[i].paginas} páginas • '
-                          '${resultado.ranking[i].diasAtivos} dias de leitura • '
-                          'máx. ${resultado.ranking[i].maiorSequencia} dias seguidos',
-                        ),
-                        trailing: Text(
-                          '${modalidade == 'mais_consistente' ? resultado.ranking[i].diasAtivos : resultado.ranking[i].paginas} $unidade',
-                          style: const TextStyle(
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Contribuição dos participantes',
+                          style: TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: _cafe,
                           ),
                         ),
+                      ] else
+                        const Text(
+                          'Classificação',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _cafe,
+                          ),
+                        ),
+                      const SizedBox(height: 10),
+                      if (resultado.ranking.isEmpty)
+                        const Card(
+                          child: Padding(
+                            padding: EdgeInsets.all(22),
+                            child: Text(
+                              'Ainda não há leituras vinculadas a esta competição.',
+                            ),
+                          ),
+                        ),
+                      for (var i = 0; i < resultado.ranking.length; i++)
+                        Card(
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFFE7D7C2),
+                              child: Text(
+                                '${i + 1}',
+                                style: const TextStyle(color: _cafe),
+                              ),
+                            ),
+                            title: Text(
+                              nomes[resultado.ranking[i].usuarioId] ??
+                                  (resultado.ranking[i].usuarioId == eu
+                                      ? 'Você'
+                                      : 'Leitor ${resultado.ranking[i].usuarioId.length > 6 ? resultado.ranking[i].usuarioId.substring(0, 6) : resultado.ranking[i].usuarioId}'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: _cafe,
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'O ranking considera apenas registros feitos durante o período da competição.',
+                        style: TextStyle(fontSize: 12, color: _marrom),
                       ),
-                    ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'O ranking considera apenas registros feitos durante o período da competição.',
-                    style: TextStyle(fontSize: 12, color: _marrom),
-                  ),
-                ],
+                    ],
+                  );
+                },
               );
             },
           );

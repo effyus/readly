@@ -128,14 +128,24 @@ class _ParticiparCompeticaoButtonState
     setState(() => processando = true);
 
     try {
-      // Cria a inscrição. Se já existir,
-      // não substitui a data original.
+      final perfil = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .get();
+
+      final nome = (perfil.data()?['nome'] as String? ?? '').trim();
       final inscricao = await inscricaoRef.get();
 
       if (!inscricao.exists) {
         await inscricaoRef.set({
           'uid': uid,
           'inscritoEm': FieldValue.serverTimestamp(),
+        });
+        await inscricaoRef.set({
+          'uid': uid,
+          'inscritoEm': FieldValue.serverTimestamp(),
+          if (nome.isNotEmpty)
+            'nome': nome.length > 60 ? nome.substring(0, 60) : nome,
         });
       }
 
