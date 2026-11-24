@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import 'competicoes_acoes.dart';
 import 'registrar_leitura_competicao_page.dart';
 import 'participar_competicao_button.dart';
 import 'livros_competicao_page.dart';
@@ -193,6 +194,18 @@ class CompeticaoDetalhesPage extends StatelessWidget {
                       Text(
                         'Término previsto: ${fim.day.toString().padLeft(2, '0')}/${fim.month.toString().padLeft(2, '0')}/${fim.year}',
                         style: const TextStyle(color: _marrom),
+                      ),
+                    ],
+
+                    if (dados['excluido'] != true) ...[
+                      const SizedBox(height: 20),
+
+                      CompeticaoAcoes(
+                        clubeId: clubeId,
+                        competicaoId: competicaoId,
+                        criadorId: (dados['criadoPor'] as String?) ?? '',
+                        nome: (dados['nome'] as String?) ?? '',
+                        descricao: (dados['descricao'] as String?) ?? '',
                       ),
                     ],
                   ],

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'editar_perfil_page.dart';
 import 'entrar_clube_page.dart';
 import 'competicao_detalhes_page.dart';
 import 'meus_livros_page.dart';
@@ -675,6 +676,7 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                     .doc(clubeDoc.id)
                     .collection('competicoes')
                     .orderBy('criadoEm', descending: true);
+                    
 
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: competicoes.snapshots(),
@@ -1042,6 +1044,23 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
+
+            ListTile(
+              leading: const Icon(
+                Icons.edit_outlined,
+                color: Color(0xFF5D4037),
+              ),
+              title: const Text('Editar meu nome'),
+              subtitle: const Text('Alterar nome exibido no Readly'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditarPerfilPage()),
+                );
+              },
+            ),
+
             Text(
               usuario?.displayName ?? usuario?.email ?? 'Leitor do Readly',
               textAlign: TextAlign.center,
