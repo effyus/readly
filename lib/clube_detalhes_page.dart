@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -50,13 +49,11 @@ class ClubeDetalhesPage extends StatelessWidget {
             content: Text(mensagem),
             actions: [
               TextButton(
-                onPressed: () =>
-                    Navigator.pop(dialogContext, false),
+                onPressed: () => Navigator.pop(dialogContext, false),
                 child: const Text('Cancelar'),
               ),
               FilledButton(
-                onPressed: () =>
-                    Navigator.pop(dialogContext, true),
+                onPressed: () => Navigator.pop(dialogContext, true),
                 child: Text(acao),
               ),
             ],
@@ -91,9 +88,7 @@ class ClubeDetalhesPage extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Não foi possível sair do clube: $e'),
-        ),
+        SnackBar(content: Text('Não foi possível sair do clube: $e')),
       );
     }
   }
@@ -122,11 +117,9 @@ class ClubeDetalhesPage extends StatelessWidget {
       Navigator.pop(context);
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Não foi possível excluir: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Não foi possível excluir: $e')));
     }
   }
 
@@ -139,8 +132,7 @@ class ClubeDetalhesPage extends StatelessWidget {
       builder: (_) => _EditarClubeDialog(
         clubeRef: clubeRef,
         nomeInicial: dados['nome'] as String? ?? '',
-        descricaoInicial:
-            dados['descricao'] as String? ?? '',
+        descricaoInicial: dados['descricao'] as String? ?? '',
       ),
     );
   }
@@ -154,9 +146,7 @@ class ClubeDetalhesPage extends StatelessWidget {
       builder: (context, clubeSnapshot) {
         if (clubeSnapshot.hasError) {
           return const Scaffold(
-            body: Center(
-              child: Text('Erro ao carregar o clube.'),
-            ),
+            body: Center(child: Text('Erro ao carregar o clube.')),
           );
         }
 
@@ -170,8 +160,7 @@ class ClubeDetalhesPage extends StatelessWidget {
 
         if (dados == null ||
             dados['excluido'] == true ||
-            !(dados['participantes'] as List? ?? [])
-                .contains(uid)) {
+            !(dados['participantes'] as List? ?? []).contains(uid)) {
           return Scaffold(
             appBar: AppBar(title: const Text('Clube')),
             body: const Center(
@@ -185,8 +174,7 @@ class ClubeDetalhesPage extends StatelessWidget {
 
         final proprietario = dados['criadorId'] == uid;
 
-        final competicoesRef =
-            clubeRef.collection('competicoes');
+        final competicoesRef = clubeRef.collection('competicoes');
 
         return Scaffold(
           backgroundColor: papel,
@@ -219,10 +207,7 @@ class ClubeDetalhesPage extends StatelessWidget {
                     const PopupMenuItem(
                       value: 'excluir',
                       child: ListTile(
-                        leading: Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
-                        ),
+                        leading: Icon(Icons.delete_outline, color: Colors.red),
                         title: Text('Excluir clube'),
                       ),
                     ),
@@ -252,10 +237,7 @@ class ClubeDetalhesPage extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 dados['descricao'] as String? ?? '',
-                style: const TextStyle(
-                  color: marrom,
-                  fontSize: 15,
-                ),
+                style: const TextStyle(color: marrom, fontSize: 15),
               ),
               const SizedBox(height: 18),
 
@@ -264,8 +246,7 @@ class ClubeDetalhesPage extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'Informações do clube',
@@ -318,49 +299,40 @@ class ClubeDetalhesPage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => CriarCompeticaoPage(
-                              clubeId: clubeId,
-                            ),
+                            builder: (_) =>
+                                CriarCompeticaoPage(clubeId: clubeId),
                           ),
                         );
                       },
-                      icon: const Icon(
-                        Icons.add_circle_outline,
-                        color: cafe,
-                      ),
+                      icon: const Icon(Icons.add_circle_outline, color: cafe),
                     ),
                 ],
               ),
 
               const SizedBox(height: 12),
 
-              StreamBuilder<
-                  QuerySnapshot<Map<String, dynamic>>>(
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: competicoesRef
                     .orderBy('criadoEm', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return const Text(
-                      'Erro ao carregar as competições.',
-                    );
+                    return const Text('Erro ao carregar as competições.');
                   }
 
                   if (!snapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
+                    return const Center(child: CircularProgressIndicator());
                   }
 
-                  final competicoes = snapshot.data!.docs;
+                  final competicoes = snapshot.data!.docs
+                      .where((doc) => doc.data()['excluido'] != true)
+                      .toList();
 
                   if (competicoes.isEmpty) {
                     return const Card(
                       child: Padding(
                         padding: EdgeInsets.all(20),
-                        child: Text(
-                          'Este clube ainda não possui competições.',
-                        ),
+                        child: Text('Este clube ainda não possui competições.'),
                       ),
                     );
                   }
@@ -373,30 +345,25 @@ class ClubeDetalhesPage extends StatelessWidget {
                       );
 
                       final unidade =
-                          competicao['modalidade'] ==
-                                  'mais_consistente'
-                              ? 'dias'
-                              : 'páginas';
+                          competicao['modalidade'] == 'mais_consistente'
+                          ? 'dias'
+                          : 'páginas';
 
                       return Card(
                         color: papelClaro,
-                        margin:
-                            const EdgeInsets.only(bottom: 12),
+                        margin: const EdgeInsets.only(bottom: 12),
                         clipBehavior: Clip.antiAlias,
                         child: ListTile(
-                          contentPadding:
-                              const EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.all(16),
                           leading: const CircleAvatar(
-                            backgroundColor:
-                                Color(0xFFE7D7C2),
+                            backgroundColor: Color(0xFFE7D7C2),
                             child: Icon(
                               Icons.emoji_events_rounded,
                               color: cafe,
                             ),
                           ),
                           title: Text(
-                            competicao['nome'] as String? ??
-                                'Competição',
+                            competicao['nome'] as String? ?? 'Competição',
                             style: const TextStyle(
                               color: cafe,
                               fontWeight: FontWeight.bold,
@@ -408,15 +375,12 @@ class ClubeDetalhesPage extends StatelessWidget {
                             '$unidade',
                           ),
                           isThreeLine: true,
-                          trailing: const Icon(
-                            Icons.chevron_right_rounded,
-                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    CompeticaoDetalhesPage(
+                                builder: (_) => CompeticaoDetalhesPage(
                                   clubeId: clubeId,
                                   competicaoId: documento.id,
                                 ),
@@ -437,9 +401,7 @@ class ClubeDetalhesPage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => CriarCompeticaoPage(
-                          clubeId: clubeId,
-                        ),
+                        builder: (_) => CriarCompeticaoPage(clubeId: clubeId),
                       ),
                     );
                   },
@@ -467,12 +429,10 @@ class _EditarClubeDialog extends StatefulWidget {
   });
 
   @override
-  State<_EditarClubeDialog> createState() =>
-      _EditarClubeDialogState();
+  State<_EditarClubeDialog> createState() => _EditarClubeDialogState();
 }
 
-class _EditarClubeDialogState
-    extends State<_EditarClubeDialog> {
+class _EditarClubeDialogState extends State<_EditarClubeDialog> {
   late final TextEditingController nome;
   late final TextEditingController descricao;
 
@@ -482,12 +442,8 @@ class _EditarClubeDialogState
   @override
   void initState() {
     super.initState();
-    nome = TextEditingController(
-      text: widget.nomeInicial,
-    );
-    descricao = TextEditingController(
-      text: widget.descricaoInicial,
-    );
+    nome = TextEditingController(text: widget.nomeInicial);
+    descricao = TextEditingController(text: widget.descricaoInicial);
   }
 
   @override
@@ -501,10 +457,12 @@ class _EditarClubeDialogState
     final novoNome = nome.text.trim();
     final novaDescricao = descricao.text.trim();
 
-    if (novoNome.isEmpty || novoNome.length > 60 ||
+    if (novoNome.isEmpty ||
+        novoNome.length > 60 ||
         novaDescricao.length > 300) {
       setState(() {
-        erro = 'Nome deve ter até 60 caracteres e '
+        erro =
+            'Nome deve ter até 60 caracteres e '
             'descrição até 300.';
       });
       return;
@@ -546,39 +504,28 @@ class _EditarClubeDialogState
             TextField(
               controller: nome,
               maxLength: 60,
-              decoration: const InputDecoration(
-                labelText: 'Nome do clube',
-              ),
+              decoration: const InputDecoration(labelText: 'Nome do clube'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: descricao,
               maxLength: 300,
               maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Descrição',
-              ),
+              decoration: const InputDecoration(labelText: 'Descrição'),
             ),
             if (erro != null)
-              Text(
-                erro!,
-                style: const TextStyle(color: Colors.red),
-              ),
+              Text(erro!, style: const TextStyle(color: Colors.red)),
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: salvando
-              ? null
-              : () => Navigator.pop(context),
+          onPressed: salvando ? null : () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
         FilledButton(
           onPressed: salvando ? null : salvar,
-          child: Text(
-            salvando ? 'Salvando...' : 'Salvar alterações',
-          ),
+          child: Text(salvando ? 'Salvando...' : 'Salvar alterações'),
         ),
       ],
     );

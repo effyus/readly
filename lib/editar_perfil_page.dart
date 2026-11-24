@@ -70,10 +70,12 @@ class _EditarPerfilPageState extends State<EditarPerfilPage> {
 
       final batch = firestore.batch();
 
+      // Perfil privado: utilizado na conta.
       batch.update(firestore.collection('usuarios').doc(usuario.uid), {
         'nome': nome,
       });
 
+      // Perfil público: utilizado nos rankings.
       batch.set(firestore.collection('perfis_publicos').doc(usuario.uid), {
         'nome': nome,
       });

@@ -41,6 +41,12 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
 
       for (final competicao in consulta.docs) {
         final dados = competicao.data();
+
+        // Não contabilizar competições excluídas.
+        if (dados['excluido'] == true) {
+          continue;
+        }
+
         final status = dados['status'] as String?;
 
         if (status == 'em_andamento') {
@@ -676,7 +682,6 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                     .doc(clubeDoc.id)
                     .collection('competicoes')
                     .orderBy('criadoEm', descending: true);
-                    
 
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: competicoes.snapshots(),
@@ -696,7 +701,9 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                       );
                     }
 
-                    final lista = competicaoSnapshot.data!.docs;
+                    final lista = competicaoSnapshot.data!.docs
+                        .where((doc) => doc.data()['excluido'] != true)
+                        .toList();
 
                     if (lista.isEmpty) {
                       return const SizedBox.shrink();
