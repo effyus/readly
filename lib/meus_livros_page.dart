@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -19,9 +18,8 @@ class MeusLivrosPage extends StatelessWidget {
     );
 
     if (resultado == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Livro cadastrado!')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Livro cadastrado!')));
     }
   }
 
@@ -29,9 +27,7 @@ class MeusLivrosPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: fundo,
-      appBar: AppBar(
-        title: const Text('Minha biblioteca'),
-      ),
+      appBar: AppBar(title: const Text('Minha biblioteca')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => cadastrar(context),
         icon: const Icon(Icons.add),
@@ -41,15 +37,11 @@ class MeusLivrosPage extends StatelessWidget {
         stream: LeituraService.observarLivros(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(
-              child: Text('Erro ao carregar a biblioteca.'),
-            );
+            return const Center(child: Text('Erro ao carregar a biblioteca.'));
           }
 
           if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           final livros = snapshot.data!.docs;
@@ -61,11 +53,7 @@ class MeusLivrosPage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.auto_stories_rounded,
-                      size: 65,
-                      color: marrom,
-                    ),
+                    Icon(Icons.auto_stories_rounded, size: 65, color: marrom),
                     SizedBox(height: 14),
                     Text(
                       'Sua biblioteca está esperando!',
@@ -76,9 +64,7 @@ class MeusLivrosPage extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 8),
-                    Text(
-                      'Cadastre seu primeiro livro.',
-                    ),
+                    Text('Cadastre seu primeiro livro.'),
                   ],
                 ),
               ),
@@ -91,18 +77,17 @@ class MeusLivrosPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final documento = livros[index];
               final dados = documento.data();
+              final capaUrl = dados['capaUrl'] as String?;
 
               final titulo = dados['titulo'] as String? ?? '';
               final autor = dados['autor'] as String? ?? '';
-              final total =
-                  (dados['totalPaginas'] as num?)?.toInt() ?? 1;
-              final atual =
-                  (dados['paginaAtual'] as num?)?.toInt() ?? 0;
-              final status =
-                  dados['status'] as String? ?? 'quero_ler';
+              final total = (dados['totalPaginas'] as num?)?.toInt() ?? 1;
+              final atual = (dados['paginaAtual'] as num?)?.toInt() ?? 0;
+              final status = dados['status'] as String? ?? 'quero_ler';
 
-              final progresso =
-                  total > 0 ? (atual / total).clamp(0.0, 1.0) : 0.0;
+              final progresso = total > 0
+                  ? (atual / total).clamp(0.0, 1.0)
+                  : 0.0;
 
               final statusTexto = switch (status) {
                 'lendo' => 'Lendo',
@@ -120,24 +105,44 @@ class MeusLivrosPage extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
+                          SizedBox(
                             width: 62,
                             height: 86,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE7D7C2),
+                            child: ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.book_rounded,
-                              size: 34,
-                              color: cafe,
+                              child:
+                                  capaUrl != null &&
+                                      capaUrl.startsWith('https://')
+                                  ? Image.network(
+                                      capaUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return const ColoredBox(
+                                              color: Color(0xFFE7D7C2),
+                                              child: Icon(
+                                                Icons.menu_book_rounded,
+                                                color: Color(0xFF5D4037),
+                                                size: 34,
+                                              ),
+                                            );
+                                          },
+                                    )
+                                  : const ColoredBox(
+                                      color: Color(0xFFE7D7C2),
+                                      child: Icon(
+                                        Icons.menu_book_rounded,
+                                        color: Color(0xFF5D4037),
+                                        size: 34,
+                                      ),
+                                    ),
                             ),
                           ),
+
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   titulo,
@@ -149,9 +154,7 @@ class MeusLivrosPage extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 5),
                                 Text(
-                                  autor.isEmpty
-                                      ? 'Autor não informado'
-                                      : autor,
+                                  autor.isEmpty ? 'Autor não informado' : autor,
                                   style: const TextStyle(
                                     color: marrom,
                                     fontSize: 13,
@@ -182,10 +185,7 @@ class MeusLivrosPage extends StatelessWidget {
                       Text(
                         '$atual de $total páginas • '
                         '${(progresso * 100).round()}%',
-                        style: const TextStyle(
-                          color: marrom,
-                          fontSize: 12,
-                        ),
+                        style: const TextStyle(color: marrom, fontSize: 12),
                       ),
                       const SizedBox(height: 15),
                       if (status != 'concluido')
@@ -200,11 +200,8 @@ class MeusLivrosPage extends StatelessWidget {
                                   );
                                 } catch (e) {
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(
-                                    SnackBar(
-                                      content: Text('Erro: $e'),
-                                    ),
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Erro: $e')),
                                   );
                                 }
                               } else {
@@ -233,10 +230,7 @@ class MeusLivrosPage extends StatelessWidget {
                       else
                         const Row(
                           children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: marrom,
-                            ),
+                            Icon(Icons.check_circle, color: marrom),
                             SizedBox(width: 8),
                             Text(
                               'Leitura concluída!',
@@ -263,12 +257,10 @@ class _CadastroLivroDialog extends StatefulWidget {
   const _CadastroLivroDialog();
 
   @override
-  State<_CadastroLivroDialog> createState() =>
-      _CadastroLivroDialogState();
+  State<_CadastroLivroDialog> createState() => _CadastroLivroDialogState();
 }
 
-class _CadastroLivroDialogState
-    extends State<_CadastroLivroDialog> {
+class _CadastroLivroDialogState extends State<_CadastroLivroDialog> {
   final formKey = GlobalKey<FormState>();
   final titulo = TextEditingController();
   final autor = TextEditingController();
@@ -320,19 +312,14 @@ class _CadastroLivroDialogState
             children: [
               TextFormField(
                 controller: titulo,
-                decoration: const InputDecoration(
-                  labelText: 'Título',
-                ),
-                validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Informe o título'
-                    : null,
+                decoration: const InputDecoration(labelText: 'Título'),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Informe o título' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: autor,
-                decoration: const InputDecoration(
-                  labelText: 'Autor',
-                ),
+                decoration: const InputDecoration(labelText: 'Autor'),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -350,10 +337,7 @@ class _CadastroLivroDialogState
               ),
               if (erro != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  erro!,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                Text(erro!, style: const TextStyle(color: Colors.red)),
               ],
             ],
           ),
@@ -361,9 +345,7 @@ class _CadastroLivroDialogState
       ),
       actions: [
         TextButton(
-          onPressed: salvando
-              ? null
-              : () => Navigator.pop(context, false),
+          onPressed: salvando ? null : () => Navigator.pop(context, false),
           child: const Text('Cancelar'),
         ),
         FilledButton(
@@ -391,8 +373,7 @@ class _RegistrarLeituraDialog extends StatefulWidget {
       _RegistrarLeituraDialogState();
 }
 
-class _RegistrarLeituraDialogState
-    extends State<_RegistrarLeituraDialog> {
+class _RegistrarLeituraDialogState extends State<_RegistrarLeituraDialog> {
   final formKey = GlobalKey<FormState>();
   final paginaController = TextEditingController();
 
@@ -402,8 +383,7 @@ class _RegistrarLeituraDialogState
   @override
   void initState() {
     super.initState();
-    paginaController.text =
-        widget.paginaAtual.toString();
+    paginaController.text = widget.paginaAtual.toString();
   }
 
   @override
@@ -431,18 +411,12 @@ class _RegistrarLeituraDialogState
       Navigator.pop(context, true);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '+$quantidade páginas registradas!',
-          ),
-        ),
+        SnackBar(content: Text('+$quantidade páginas registradas!')),
       );
     } catch (e) {
       if (mounted) {
         setState(() {
-          erro = e is StateError
-              ? e.message
-              : 'Não foi possível registrar: $e';
+          erro = e is StateError ? e.message : 'Não foi possível registrar: $e';
         });
       }
     } finally {
@@ -487,19 +461,14 @@ class _RegistrarLeituraDialogState
             ),
             if (erro != null) ...[
               const SizedBox(height: 12),
-              Text(
-                erro!,
-                style: const TextStyle(color: Colors.red),
-              ),
+              Text(erro!, style: const TextStyle(color: Colors.red)),
             ],
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: salvando
-              ? null
-              : () => Navigator.pop(context),
+          onPressed: salvando ? null : () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
         FilledButton(

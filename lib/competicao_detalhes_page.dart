@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import 'registrar_leitura_competicao_page.dart';
+import 'participar_competicao_button.dart';
 import 'livros_competicao_page.dart';
 import 'ranking_competicao_page.dart';
 import 'meus_livros_page.dart';
@@ -37,9 +39,7 @@ class CompeticaoDetalhesPage extends StatelessWidget {
   }
 
   void _abrir(BuildContext context, Widget pagina) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => pagina),
-    );
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => pagina));
   }
 
   Widget _atalho({
@@ -55,8 +55,10 @@ class CompeticaoDetalhesPage extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         leading: Icon(icone, size: 28, color: _marrom),
-        title: Text(titulo,
-            style: const TextStyle(fontWeight: FontWeight.bold, color: _cafe)),
+        title: Text(
+          titulo,
+          style: const TextStyle(fontWeight: FontWeight.bold, color: _cafe),
+        ),
         subtitle: Text(descricao),
         trailing: const Icon(Icons.chevron_right_rounded, color: _marrom),
         onTap: aoTocar,
@@ -79,11 +81,14 @@ class CompeticaoDetalhesPage extends StatelessWidget {
         backgroundColor: _fundo,
         foregroundColor: _cafe,
       ),
+
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: referencia.snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('Não foi possível carregar a competição.'));
+            return const Center(
+              child: Text('Não foi possível carregar a competição.'),
+            );
           }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -105,28 +110,32 @@ class CompeticaoDetalhesPage extends StatelessWidget {
               : null;
           final agora = DateTime.now();
           final status = dados['status'] as String?;
-          final encerrada = status == 'concluida' ||
+          final encerrada =
+              status == 'concluida' ||
               status == 'cancelada' ||
               (fim != null && !agora.isBefore(fim));
-          final agendada = status == 'agendada' ||
+          final agendada =
+              status == 'agendada' ||
               (inicio != null && agora.isBefore(inicio));
           final situacao = encerrada
               ? 'Encerrada'
               : agendada
-                  ? 'Agendada'
-                  : fim == null
-                      ? 'Período não definido'
-                      : 'Em andamento';
+              ? 'Agendada'
+              : fim == null
+              ? 'Período não definido'
+              : 'Em andamento';
 
           return ListView(
             padding: const EdgeInsets.all(18),
             children: [
-              Text(nome,
-                  style: const TextStyle(
-                    color: _cafe,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 26,
-                  )),
+              Text(
+                nome,
+                style: const TextStyle(
+                  color: _cafe,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 26,
+                ),
+              ),
               const SizedBox(height: 6),
               if (descricao.trim().isNotEmpty)
                 Text(descricao, style: const TextStyle(color: _marrom)),
@@ -141,42 +150,67 @@ class CompeticaoDetalhesPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      const Icon(Icons.emoji_events_outlined, color: _caramelo),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(_nomeModalidade(modalidade),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.emoji_events_outlined,
+                          color: _caramelo,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _nomeModalidade(modalidade),
                             style: const TextStyle(
-                                color: _cafe,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18)),
-                      ),
-                    ]),
+                              color: _cafe,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 10),
-                    Text('Situação: $situacao',
-                        style: const TextStyle(color: _marrom)),
+                    Text(
+                      'Situação: $situacao',
+                      style: const TextStyle(color: _marrom),
+                    ),
                     if (meta != null) ...[
                       const SizedBox(height: 5),
-                      Text('Meta: $meta ${modalidade == 'mais_consistente' ? 'dias' : 'páginas'}',
-                          style: const TextStyle(color: _marrom)),
+                      Text(
+                        'Meta: $meta ${modalidade == 'mais_consistente' ? 'dias' : 'páginas'}',
+                        style: const TextStyle(color: _marrom),
+                      ),
                     ],
                     if (duracao != null) ...[
                       const SizedBox(height: 5),
-                      Text('Duração: $duracao dias',
-                          style: const TextStyle(color: _marrom)),
+                      Text(
+                        'Duração: $duracao dias',
+                        style: const TextStyle(color: _marrom),
+                      ),
                     ],
                     if (fim != null) ...[
                       const SizedBox(height: 5),
-                      Text('Término previsto: ${fim.day.toString().padLeft(2, '0')}/${fim.month.toString().padLeft(2, '0')}/${fim.year}',
-                          style: const TextStyle(color: _marrom)),
+                      Text(
+                        'Término previsto: ${fim.day.toString().padLeft(2, '0')}/${fim.month.toString().padLeft(2, '0')}/${fim.year}',
+                        style: const TextStyle(color: _marrom),
+                      ),
                     ],
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              const Text('Acessar',
-                  style: TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold, color: _cafe)),
+              ParticiparCompeticaoButton(
+                clubeId: clubeId,
+                competicaoId: competicaoId,
+              ),
+              const Text(
+                'Acessar',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: _cafe,
+                ),
+              ),
               const SizedBox(height: 12),
               _atalho(
                 context: context,
@@ -205,13 +239,21 @@ class CompeticaoDetalhesPage extends StatelessWidget {
                   ),
                 ),
               ),
+
               _atalho(
                 context: context,
                 icone: Icons.edit_note_rounded,
-                titulo: 'Minhas leituras',
-                descricao: 'Registrar páginas na biblioteca pessoal',
-                aoTocar: () => _abrir(context, const MeusLivrosPage()),
+                titulo: 'Registrar leitura',
+                descricao: 'Ler livros oficiais e pontuar no desafio',
+                aoTocar: () => _abrir(
+                  context,
+                  RegistrarLeituraCompeticaoPage(
+                    clubeId: clubeId,
+                    competicaoId: competicaoId,
+                  ),
+                ),
               ),
+
               const SizedBox(height: 9),
               const Text(
                 'Por enquanto, as páginas registradas na biblioteca não pontuam '

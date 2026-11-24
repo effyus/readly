@@ -419,6 +419,7 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
             return Column(
               children: livros.map((documento) {
                 final dados = documento.data();
+                final capaUrl = dados['capaUrl'] as String?;
 
                 final total = (dados['totalPaginas'] as num?)?.toInt() ?? 1;
                 final atual = (dados['paginaAtual'] as num?)?.toInt() ?? 0;
@@ -434,19 +435,46 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                       children: [
                         Row(
                           children: [
-                            Container(
+                            SizedBox(
                               width: 65,
                               height: 88,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE7D7C2),
+                              child: ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.book_rounded,
-                                color: cafe,
-                                size: 34,
+                                child:
+                                    capaUrl != null &&
+                                        capaUrl.startsWith('https://')
+                                    ? Image.network(
+                                        capaUrl,
+                                        width: 65,
+                                        height: 88,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return const ColoredBox(
+                                                color: Color(0xFFE7D7C2),
+                                                child: Center(
+                                                  child: Icon(
+                                                    Icons.book_rounded,
+                                                    color: cafe,
+                                                    size: 34,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                      )
+                                    : const ColoredBox(
+                                        color: Color(0xFFE7D7C2),
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.book_rounded,
+                                            color: cafe,
+                                            size: 34,
+                                          ),
+                                        ),
+                                      ),
                               ),
                             ),
+
                             const SizedBox(width: 15),
                             Expanded(
                               child: Column(
