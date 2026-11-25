@@ -1,15 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
-import 'registrar_leitura_competicao_page.dart';
-import 'participar_competicao_button.dart';
+import 'registro_rapido_competicao_sheet.dart';
 import 'livros_competicao_page.dart';
+import 'modalidades_service.dart';
+import 'participar_competicao_button.dart';
 import 'ranking_competicao_page.dart';
-import 'meus_livros_page.dart';
 
-/// Página principal da competição.
-/// Esta etapa organiza a navegação; ainda não envia leituras aos rankings.
+
+/// Painel único da competição. Não altera regras ou registros do Firestore.
 class CompeticaoDetalhesPage extends StatelessWidget {
   final String clubeId;
   final String competicaoId;
@@ -25,77 +25,39 @@ class CompeticaoDetalhesPage extends StatelessWidget {
   static const _caramelo = Color(0xFFA67C52);
   static const _fundo = Color(0xFFF5EFE3);
   static const _papel = Color(0xFFFFFCF7);
+  static const _borda = Color(0xFFD8C7AE);
 
-  String _nomeModalidade(String? modalidade) {
-    switch (modalidade) {
-      case 'quem_le_mais':
-        return 'Quem lê mais';
-      case 'mais_consistente':
-        return 'Mais consistente';
-      case 'meta_coletiva':
-        return 'Meta coletiva';
-      default:
-        return 'Modalidade não definida';
-    }
+  DocumentReference<Map<String, dynamic>> get _competicao => FirebaseFirestore
+      .instance
+      .collection('clubes')
+      .doc(clubeId)
+      .collection('competicoes')
+      .doc(competicaoId);
+
+  String _modalidadeNome(String modalidade) => switch (modalidade) {
+    'quem_le_mais' => 'Quem lê mais',
+    'mais_consistente' => 'Mais consistente',
+    'meta_coletiva' => 'Meta coletiva',
+    _ => 'Competição de leitura',
+  };
+
+  String _data(DateTime value) =>
+      '${value.day.toString().padLeft(2, '0')}/'
+      '${value.month.toString().padLeft(2, '0')}/${value.year}';
+
+  void _abrir(BuildContext context, Widget pagina) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => pagina));
   }
 
-  Future<void> excluirCompeticao(BuildContext context, String nome) async {
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Excluir competição?'),
-        content: Text(
-          'Deseja excluir a competição "$nome"?\n\n'
-          'Ela deixará de aparecer nas listas ativas, '
-          'mas os registros de leitura serão preservados.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmar != true || !context.mounted) return;
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('clubes')
-          .doc(clubeId)
-          .collection('competicoes')
-          .doc(competicaoId)
-          .update({
-            'excluido': true,
-            'excluidoEm': FieldValue.serverTimestamp(),
-          });
-
-      if (!context.mounted) return;
-      Navigator.pop(context);
-    } on FirebaseException catch (e) {
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erro ao excluir: ${e.code}')));
-    }
-  }
-
-  Future<void> abrirEdicaoCompeticao(
+  Future<void> _editar(
     BuildContext context,
     String nomeAtual,
     String descricaoAtual,
   ) async {
     final nomeController = TextEditingController(text: nomeAtual);
     final descricaoController = TextEditingController(text: descricaoAtual);
-
     try {
-      final confirmar = await showDialog<bool>(
+      final valores = await showDialog<Map<String, String>>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Editar competição'),
@@ -106,321 +68,493 @@ class CompeticaoDetalhesPage extends StatelessWidget {
                 TextField(
                   controller: nomeController,
                   maxLength: 60,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome da competição',
-                    prefixIcon: Icon(Icons.edit_outlined),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Nome'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: descricaoController,
-                  maxLines: 3,
                   maxLength: 300,
-                  decoration: const InputDecoration(
-                    labelText: 'Descrição',
-                    alignLabelWithHint: true,
-                  ),
+                  maxLines: 3,
+                  decoration: const InputDecoration(labelText: 'Descrição'),
                 ),
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancelar'),
             ),
             FilledButton(
               onPressed: () {
-                if (nomeController.text.trim().isEmpty) {
+                final nome = nomeController.text.trim();
+                if (nome.isEmpty) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(content: Text('Informe um nome válido.')),
                   );
                   return;
                 }
-
-                Navigator.pop(dialogContext, true);
+                Navigator.pop(dialogContext, {
+                  'nome': nome,
+                  'descricao': descricaoController.text.trim(),
+                });
               },
               child: const Text('Salvar'),
             ),
           ],
         ),
       );
-
-      if (confirmar != true || !context.mounted) return;
-
-      await FirebaseFirestore.instance
-          .collection('clubes')
-          .doc(clubeId)
-          .collection('competicoes')
-          .doc(competicaoId)
-          .update({
-            'nome': nomeController.text.trim(),
-            'descricao': descricaoController.text.trim(),
-          });
-
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Competição atualizada com sucesso!')),
-      );
+      if (valores == null || !context.mounted) return;
+      await _competicao.update(valores);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Competição atualizada!')));
+      }
     } on FirebaseException catch (e) {
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erro ao editar: ${e.code}')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erro ao editar: ${e.code}')));
+      }
     } finally {
-      nomeController.dispose();
-      descricaoController.dispose();
+      // Aguarda o fechamento do diálogo antes de descartar os controladores.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        nomeController.dispose();
+        descricaoController.dispose();
+      });
     }
   }
 
-  void _abrir(BuildContext context, Widget pagina) {
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => pagina));
-  }
-
-  Widget _atalho({
-    required BuildContext context,
-    required IconData icone,
-    required String titulo,
-    required String descricao,
-    required VoidCallback aoTocar,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      color: _papel,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        leading: Icon(icone, size: 28, color: _marrom),
-        title: Text(
-          titulo,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: _cafe),
+  Future<void> _excluir(BuildContext context, String nome) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir competição?'),
+        content: Text(
+          'Deseja excluir "$nome"? A competição sairá das listas ativas, '
+          'mas o histórico de leituras será preservado.',
         ),
-        subtitle: Text(descricao),
-        trailing: const Icon(Icons.chevron_right_rounded, color: _marrom),
-        onTap: aoTocar,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final referencia = FirebaseFirestore.instance
-        .collection('clubes')
-        .doc(clubeId)
-        .collection('competicoes')
-        .doc(competicaoId);
-
-    return Scaffold(
-      backgroundColor: _fundo,
-
-      appBar: AppBar(
-        title: const Text('Detalhes da competição'),
-        backgroundColor: _fundo,
-        foregroundColor: _cafe,
         actions: [
-          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: referencia.snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData || !snapshot.data!.exists) {
-                return const SizedBox.shrink();
-              }
-
-              final dados = snapshot.data!.data() ?? {};
-              final uid = FirebaseAuth.instance.currentUser?.uid;
-
-              final souProprietario = uid != null && dados['criadoPor'] == uid;
-
-              if (!souProprietario || dados['excluido'] == true) {
-                return const SizedBox.shrink();
-              }
-
-              final nome = (dados['nome'] as String?) ?? 'Competição';
-
-              final descricao = (dados['descricao'] as String?) ?? '';
-
-              return PopupMenuButton<String>(
-                tooltip: 'Gerenciar competição',
-                icon: const Icon(Icons.more_vert_rounded),
-                onSelected: (opcao) {
-                  if (opcao == 'editar') {
-                    abrirEdicaoCompeticao(context, nome, descricao);
-                  } else if (opcao == 'excluir') {
-                    excluirCompeticao(context, nome);
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem<String>(
-                    value: 'editar',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, color: Color(0xFF5D4037)),
-                        SizedBox(width: 10),
-                        Text('Editar competição'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'excluir',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline_rounded, color: Colors.red),
-                        SizedBox(width: 10),
-                        Text(
-                          'Excluir competição',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Excluir'),
           ),
         ],
       ),
+    );
+    if (confirmar != true || !context.mounted) return;
+    try {
+      await _competicao.update({
+        'excluido': true,
+        'excluidoEm': FieldValue.serverTimestamp(),
+      });
+      if (context.mounted) Navigator.pop(context);
+    } on FirebaseException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao excluir: ${e.code}')));
+      }
+    }
+  }
 
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: referencia.snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(
-              child: Text('Não foi possível carregar a competição.'),
-            );
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.data!.exists) {
-            return const Center(child: Text('Competição não encontrada.'));
-          }
+  
 
-          final dados = snapshot.data!.data()!;
-          final nome = (dados['nome'] as String?) ?? 'Competição';
+  Widget _tituloSecao(String titulo, VoidCallback aoVerTodos) => Row(
+    children: [
+      Expanded(
+        child: Text(
+          titulo,
+          style: const TextStyle(
+            color: _cafe,
+            fontWeight: FontWeight.bold,
+            fontSize: 19,
+          ),
+        ),
+      ),
+      TextButton(onPressed: aoVerTodos, child: const Text('Ver todos')),
+    ],
+  );
 
-          final uid = FirebaseAuth.instance.currentUser?.uid;
+  Widget _cartao({required Widget child}) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: _papel,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: _borda),
+    ),
+    child: child,
+  );
 
-          final souProprietario = uid != null && dados['criadoPor'] == uid;
-          final descricao = dados['descricao'] as String? ?? '';
-          final modalidade = dados['modalidade'] as String?;
-          final meta = (dados['metaValor'] as num?)?.toInt();
-          final duracao = (dados['duracaoDias'] as num?)?.toInt();
-          final criadoEm = dados['criadoEm'];
-          final inicio = criadoEm is Timestamp ? criadoEm.toDate() : null;
-          final fim = inicio != null && duracao != null && duracao > 0
-              ? inicio.add(Duration(days: duracao))
-              : null;
-          final agora = DateTime.now();
-          final status = dados['status'] as String?;
-          final encerrada =
-              status == 'concluida' ||
-              status == 'cancelada' ||
-              (fim != null && !agora.isBefore(fim));
-          final agendada =
-              status == 'agendada' ||
-              (inicio != null && agora.isBefore(inicio));
-          final situacao = encerrada
-              ? 'Encerrada'
-              : agendada
-              ? 'Agendada'
-              : fim == null
-              ? 'Período não definido'
-              : 'Em andamento';
+  @override
+  Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-          return ListView(
-            padding: const EdgeInsets.all(18),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _competicao.snapshots(),
+      builder: (context, info) {
+        if (info.hasError) {
+          return const Scaffold(
+            body: Center(
+              child: Text('Não foi possível carregar esta competição.'),
+            ),
+          );
+        }
+        if (!info.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (!info.data!.exists || info.data!.data()?['excluido'] == true) {
+          return const Scaffold(
+            body: Center(child: Text('Competição não encontrada.')),
+          );
+        }
+
+        final dados = info.data!.data()!;
+        final nome = (dados['nome'] as String?) ?? 'Competição';
+        final descricao = (dados['descricao'] as String?) ?? '';
+        final modalidade = (dados['modalidade'] as String?) ?? 'quem_le_mais';
+        final meta = (dados['metaValor'] as num?)?.toInt() ?? 0;
+        final duracao = (dados['duracaoDias'] as num?)?.toInt() ?? 0;
+        final criadoEm = dados['criadoEm'];
+        final inicio = criadoEm is Timestamp ? criadoEm.toDate() : null;
+        final fim = inicio != null && duracao > 0
+            ? inicio.add(Duration(days: duracao))
+            : null;
+        final agora = DateTime.now();
+        final encerrada =
+            dados['status'] == 'concluida' ||
+            dados['status'] == 'cancelada' ||
+            (fim != null && !agora.isBefore(fim));
+        final agendada =
+            dados['status'] == 'agendada' ||
+            (inicio != null && agora.isBefore(inicio));
+        final proprietario = uid != null && dados['criadoPor'] == uid;
+
+        return Scaffold(
+          backgroundColor: _fundo,
+          appBar: AppBar(
+            backgroundColor: _fundo,
+            foregroundColor: _cafe,
+            title: const Text('Competição'),
+            actions: [
+              if (proprietario)
+                PopupMenuButton<String>(
+                  tooltip: 'Gerenciar competição',
+                  icon: const Icon(Icons.more_vert_rounded),
+                  onSelected: (opcao) {
+                    if (opcao == 'editar') _editar(context, nome, descricao);
+                    if (opcao == 'excluir') _excluir(context, nome);
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: 'editar',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, color: _cafe),
+                          SizedBox(width: 10),
+                          Text('Editar competição'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'excluir',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, color: Colors.red),
+                          SizedBox(width: 10),
+                          Text('Excluir competição'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          // Apenas participantes inscritos podem registrar leituras.
+          bottomNavigationBar: uid == null || encerrada || agendada
+              ? null
+              : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                  stream: _competicao
+                      .collection('participantes')
+                      .doc(uid)
+                      .snapshots(),
+                  builder: (context, inscricao) {
+                    if (!inscricao.hasData || !inscricao.data!.exists) {
+                      return const SizedBox.shrink();
+                    }
+                    return SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            abrirRegistroRapido(
+                              context,
+                              clubeId: clubeId,
+                              competicaoId: competicaoId,
+                            );
+                          },
+                          icon: const Icon(Icons.edit_note_rounded),
+                          label: const Text('Registrar leitura'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _cafe,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
             children: [
               Text(
                 nome,
                 style: const TextStyle(
                   color: _cafe,
+                  fontSize: 27,
                   fontWeight: FontWeight.bold,
-                  fontSize: 26,
                 ),
               ),
-              const SizedBox(height: 6),
-              if (descricao.trim().isNotEmpty)
-                Text(descricao, style: const TextStyle(color: _marrom)),
-              const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: _papel,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFD8C7AE)),
+              if (descricao.trim().isNotEmpty) ...[
+                const SizedBox(height: 5),
+                Text(
+                  descricao,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: _marrom),
                 ),
+              ],
+              const SizedBox(height: 14),
+              _cartao(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const Icon(
                           Icons.emoji_events_outlined,
                           color: _caramelo,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _nomeModalidade(modalidade),
-                            style: const TextStyle(
-                              color: _cafe,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
+                        Text(
+                          _modalidadeNome(modalidade),
+                          style: const TextStyle(
+                            color: _cafe,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Chip(
+                          label: Text(
+                            encerrada
+                                ? 'Encerrada'
+                                : agendada
+                                ? 'Agendada'
+                                : 'Em andamento',
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Situação: $situacao',
-                      style: const TextStyle(color: _marrom),
-                    ),
-                    if (meta != null) ...[
-                      const SizedBox(height: 5),
+                    const SizedBox(height: 8),
+                    if (fim != null)
                       Text(
-                        'Meta: $meta ${modalidade == 'mais_consistente' ? 'dias' : 'páginas'}',
+                        'Até ${_data(fim)} • $duracao dias',
+                        style: const TextStyle(color: _marrom),
+                      ),
+                    if (modalidade == 'meta_coletiva' && meta > 0) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Meta do grupo: $meta páginas',
                         style: const TextStyle(color: _marrom),
                       ),
                     ],
-                    if (duracao != null) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        'Duração: $duracao dias',
-                        style: const TextStyle(color: _marrom),
+                    if ((dados['regras'] as String? ?? '').trim().isNotEmpty)
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        childrenPadding: EdgeInsets.zero,
+                        title: const Text('Regras do desafio'),
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text((dados['regras'] as String).trim()),
+                          ),
+                        ],
                       ),
-                    ],
-                    if (fim != null) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        'Término previsto: ${fim.day.toString().padLeft(2, '0')}/${fim.month.toString().padLeft(2, '0')}/${fim.year}',
-                        style: const TextStyle(color: _marrom),
-                      ),
-                    ],
-
-                    
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
+              // O próprio botão existente administra inscrição e permissões.
               ParticiparCompeticaoButton(
                 clubeId: clubeId,
                 competicaoId: competicaoId,
               ),
-              const Text(
-                'Acessar',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: _cafe,
+              const SizedBox(height: 20),
+              _tituloSecao(
+                'Classificação',
+                () => _abrir(
+                  context,
+                  RankingCompeticaoPage(
+                    clubeId: clubeId,
+                    competicaoId: competicaoId,
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              _atalho(
-                context: context,
-                icone: Icons.menu_book_rounded,
-                titulo: 'Livros da competição',
-                descricao: 'Ver livros compartilhados e adicionar à biblioteca',
-                aoTocar: () => _abrir(
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _competicao.collection('registros').snapshots(),
+                builder: (context, registrosSnapshot) {
+                  if (registrosSnapshot.hasError) {
+                    return _cartao(
+                      child: const Text('Não foi possível carregar o ranking.'),
+                    );
+                  }
+                  if (!registrosSnapshot.hasData ||
+                      inicio == null ||
+                      fim == null) {
+                    return _cartao(
+                      child: const Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  final registros = registrosSnapshot.data!.docs
+                      .map((doc) {
+                        final item = doc.data();
+                        final criado = item['criadoEm'];
+                        if (criado is! Timestamp) return null;
+                        return RegistroPontuacao(
+                          usuarioId: (item['usuarioId'] as String?) ?? '',
+                          leituraId: (item['leituraId'] as String?) ?? doc.id,
+                          paginasLidas:
+                              (item['paginasLidas'] as num?)?.toInt() ?? 0,
+                          diaLocal: (item['diaLocal'] as String?) ?? '',
+                          criadoEm: criado.toDate(),
+                        );
+                      })
+                      .whereType<RegistroPontuacao>()
+                      .toList();
+                  final resultado = ModalidadesService.calcular(
+                    modalidade: modalidade,
+                    registros: registros,
+                    inicio: inicio,
+                    fim: fim,
+                    meta: meta,
+                  );
+                  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: _competicao.collection('participantes').snapshots(),
+                    builder: (context, participantesSnapshot) {
+                      final nomes = <String, String>{};
+                      if (participantesSnapshot.hasData) {
+                        for (final doc in participantesSnapshot.data!.docs) {
+                          final nomePessoa =
+                              (doc.data()['nome'] as String? ?? '').trim();
+                          if (nomePessoa.isNotEmpty) nomes[doc.id] = nomePessoa;
+                        }
+                      }
+                      final lideres = resultado.ranking.take(3).toList();
+                      return _cartao(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (modalidade == 'meta_coletiva' && meta > 0) ...[
+                              Text(
+                                '${resultado.paginasColetivas} / $meta páginas do grupo',
+                                style: const TextStyle(
+                                  color: _cafe,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(
+                                value: resultado.progressoColetivo,
+                                minHeight: 9,
+                                color: _marrom,
+                                backgroundColor: const Color(0xFFE7D7C2),
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
+                            if (lideres.isEmpty)
+                              const Text(
+                                'As primeiras leituras aparecerão aqui.',
+                                style: TextStyle(color: _marrom),
+                              ),
+                            for (var i = 0; i < lideres.length; i++) ...[
+                              if (i > 0)
+                                const Divider(color: _borda, height: 22),
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 17,
+                                    backgroundColor: const Color(0xFFE7D7C2),
+                                    child: Text(
+                                      '${i + 1}º',
+                                      style: const TextStyle(
+                                        color: _cafe,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      nomes[lideres[i].usuarioId] ??
+                                          (lideres[i].usuarioId == uid
+                                              ? 'Você'
+                                              : 'Leitor'),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: _cafe,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        modalidade == 'mais_consistente'
+                                            ? '${lideres[i].diasAtivos} dias'
+                                            : '${lideres[i].paginas} pág.',
+                                        style: const TextStyle(
+                                          color: _cafe,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        modalidade == 'mais_consistente'
+                                            ? '${lideres[i].paginas} páginas'
+                                            : '${lideres[i].diasAtivos} dias lendo',
+                                        style: const TextStyle(
+                                          color: _marrom,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 18),
+              _tituloSecao(
+                'Livros do desafio',
+                () => _abrir(
                   context,
                   LivrosCompeticaoPage(
                     clubeId: clubeId,
@@ -429,45 +563,92 @@ class CompeticaoDetalhesPage extends StatelessWidget {
                   ),
                 ),
               ),
-              _atalho(
-                context: context,
-                icone: Icons.emoji_events_rounded,
-                titulo: 'Ranking',
-                descricao: 'Classificação da modalidade selecionada',
-                aoTocar: () => _abrir(
-                  context,
-                  RankingCompeticaoPage(
-                    clubeId: clubeId,
-                    competicaoId: competicaoId,
-                  ),
-                ),
-              ),
-
-              _atalho(
-                context: context,
-                icone: Icons.edit_note_rounded,
-                titulo: 'Registrar leitura',
-                descricao: 'Ler livros oficiais e pontuar no desafio',
-                aoTocar: () => _abrir(
-                  context,
-                  RegistrarLeituraCompeticaoPage(
-                    clubeId: clubeId,
-                    competicaoId: competicaoId,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 9),
-              const Text(
-                'Por enquanto, as páginas registradas na biblioteca não pontuam '
-                'automaticamente nesta competição. A vinculação segura dos registros '
-                'será implementada na próxima etapa.',
-                style: TextStyle(color: _marrom, fontSize: 12),
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _competicao.collection('livros').snapshots(),
+                builder: (context, livrosSnapshot) {
+                  if (livrosSnapshot.hasError) {
+                    return _cartao(
+                      child: const Text('Não foi possível carregar os livros.'),
+                    );
+                  }
+                  if (!livrosSnapshot.hasData) {
+                    return _cartao(
+                      child: const Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  final livros = livrosSnapshot.data!.docs;
+                  if (livros.isEmpty) {
+                    return _cartao(
+                      child: const Text(
+                        'Ainda não há livros oficiais nesta competição.',
+                        style: TextStyle(color: _marrom),
+                      ),
+                    );
+                  }
+                  return _cartao(
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < livros.length && i < 3; i++) ...[
+                          if (i > 0) const Divider(color: _borda),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.menu_book_rounded,
+                                color: _marrom,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      (livros[i].data()['titulo'] as String?) ??
+                                          'Livro',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: _cafe,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      (livros[i].data()['autor'] as String?) ??
+                                          '',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: _marrom,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () => _abrir(
+                            context,
+                            LivrosCompeticaoPage(
+                              clubeId: clubeId,
+                              competicaoId: competicaoId,
+                              nomeCompeticao: nome,
+                            ),
+                          ),
+                          icon: const Icon(Icons.library_books_outlined),
+                          label: const Text('Abrir biblioteca do desafio'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
