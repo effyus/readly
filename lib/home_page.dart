@@ -27,6 +27,7 @@ class ReadlyHomePage extends StatefulWidget {
 
 class _ReadlyHomePageState extends State<ReadlyHomePage> {
   int paginaAtual = 0;
+  int secaoDesafios = 0;
 
   final Color marrom = Color(0xFF795548);
 
@@ -83,64 +84,69 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
   Widget build(BuildContext context) {
     final paginas = [
       inicioPage(),
-      clubesPage(),
-      competicoesPage(),
+      const MeusLivrosPage(),
+      desafiosPage(),
       perfilPage(),
     ];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5EFE3),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF5EFE3),
-        title: Row(
-          children: [
-            Icon(Icons.menu_book_rounded, color: marrom, size: 30),
-            const SizedBox(width: 8),
-            Text(
-              'Readly',
-              style: TextStyle(
-                color: marrom,
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
+      appBar: paginaAtual == 1
+          ? null
+          : AppBar(
+              backgroundColor: const Color(0xFFF5EFE3),
+              title: Row(
+                children: [
+                  Icon(Icons.menu_book_rounded, color: marrom, size: 30),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Readly',
+                    style: TextStyle(
+                      color: marrom,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                  ),
+                ],
               ),
+              actions: [
+                IconButton(
+                  onPressed: () => setState(() {
+                    paginaAtual = 2;
+                    secaoDesafios = 1;
+                  }),
+                  icon: const Icon(Icons.account_circle_outlined),
+                  tooltip: 'Meu perfil',
+                ),
+                const SizedBox(width: 8),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () => setState(() => paginaAtual = 3),
-            icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Meu perfil',
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: paginas[paginaAtual],
+
       bottomNavigationBar: NavigationBar(
         selectedIndex: paginaAtual,
         onDestinationSelected: (indice) {
           setState(() => paginaAtual = indice);
         },
-
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            selectedIcon: Icon(Icons.home_rounded),
             label: 'Início',
           ),
           NavigationDestination(
-            icon: Icon(Icons.groups_outlined),
-            selectedIcon: Icon(Icons.groups),
-            label: 'Clubes',
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book_rounded),
+            label: 'Biblioteca',
           ),
           NavigationDestination(
             icon: Icon(Icons.emoji_events_outlined),
-            selectedIcon: Icon(Icons.emoji_events),
-            label: 'Competições',
+            selectedIcon: Icon(Icons.emoji_events_rounded),
+            label: 'Desafios',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            selectedIcon: Icon(Icons.person_rounded),
             label: 'Perfil',
           ),
         ],
@@ -274,7 +280,10 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                 );
 
                 final concluidos = livros.where((doc) {
-                  return doc.data()['status'] == 'concluido';
+                  final dados = doc.data();
+
+                  return dados['status'] == 'concluido' &&
+                      dados['removido'] != true;
                 }).length;
 
                 final ofensiva = LeituraService.calcularOfensiva(
@@ -409,10 +418,13 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
             }
 
             final livros = snapshot.data!.docs
-                .where((doc) => doc.data()['status'] == 'lendo')
+                .where(
+                  (doc) =>
+                      doc.data()['status'] == 'lendo' &&
+                      doc.data()['removido'] != true,
+                )
                 .take(3)
                 .toList();
-
             if (livros.isEmpty) {
               return Container(
                 padding: const EdgeInsets.all(24),
@@ -620,6 +632,115 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget desafiosPage() {
+    const cafe = Color(0xFF5D4037);
+    const marrom = Color(0xFF795548);
+    const papel = Color(0xFFFFFCF7);
+
+    return Column(
+      children: [
+        // Cabeçalho dos desafios
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sua jornada em grupo',
+                style: TextStyle(
+                  color: cafe,
+                  fontSize: 25,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Participe de desafios e acompanhe seus clubes.',
+                style: TextStyle(color: marrom, fontSize: 14),
+              ),
+              const SizedBox(height: 22),
+
+              // Alternância entre competições e clubes
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE7D7C2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _botaoSecaoDesafios(
+                        titulo: 'Competições',
+                        icone: Icons.emoji_events_outlined,
+                        selecionado: secaoDesafios == 0,
+                        onTap: () {
+                          setState(() => secaoDesafios = 0);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: _botaoSecaoDesafios(
+                        titulo: 'Meus clubes',
+                        icone: Icons.groups_outlined,
+                        selecionado: secaoDesafios == 1,
+                        onTap: () {
+                          setState(() => secaoDesafios = 1);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Conteúdo reaproveitado das páginas atuais
+        Expanded(child: secaoDesafios == 0 ? competicoesPage() : clubesPage()),
+      ],
+    );
+  }
+
+  Widget _botaoSecaoDesafios({
+    required String titulo,
+    required IconData icone,
+    required bool selecionado,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: selecionado ? const Color(0xFFFFFCF7) : Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icone, size: 19, color: const Color(0xFF5D4037)),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(
+                  titulo,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: const Color(0xFF5D4037),
+                    fontWeight: selecionado ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1247,7 +1368,7 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    subtitle: const Text('Alterar nome e foto'),
+                    subtitle: const Text('Alterar nome e senha'),
                     trailing: const Icon(Icons.chevron_right, color: marrom),
                     onTap: () {
                       Navigator.push(

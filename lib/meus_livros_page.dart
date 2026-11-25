@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'leitura_service.dart';
 
@@ -20,6 +22,67 @@ class MeusLivrosPage extends StatelessWidget {
     if (resultado == true && context.mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Livro cadastrado!')));
+    }
+  }
+
+  Future<void> removerLivro(
+    BuildContext context,
+    String livroId,
+    String titulo,
+  ) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remover livro?'),
+        content: Text(
+          'Deseja remover "$titulo" da sua biblioteca?\n\n'
+          'O livro deixará de aparecer nas suas leituras, '
+          'mas o histórico e os pontos já registrados '
+          'nas competições serão preservados.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !context.mounted) return;
+
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+
+      if (uid == null) {
+        throw StateError('Usuário não autenticado.');
+      }
+
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .collection('livros')
+          .doc(livroId)
+          .update({
+            'removido': true,
+            'removidoEm': FieldValue.serverTimestamp(),
+          });
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Livro removido da biblioteca.')),
+      );
+    } on FirebaseException catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erro ao remover: ${e.code}')));
     }
   }
 
@@ -44,7 +107,9 @@ class MeusLivrosPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final livros = snapshot.data!.docs;
+          final livros = snapshot.data!.docs
+              .where((doc) => doc.data()['removido'] != true)
+              .toList();
 
           if (livros.isEmpty) {
             return const Center(
@@ -95,6 +160,35 @@ class MeusLivrosPage extends StatelessWidget {
                 _ => 'Quero ler',
               };
 
+              trailing:
+              PopupMenuButton<String>(
+                tooltip: 'Opções do livro',
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: Color(0xFF795548),
+                ),
+                onSelected: (opcao) {
+                  if (opcao == 'remover') {
+                    removerLivro(
+                      context,
+                      documento.id,
+                      (dados['titulo'] as String?) ?? 'Livro',
+                    );
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem<String>(
+                    value: 'remover',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline_rounded, color: Colors.red),
+                        SizedBox(width: 10),
+                        Text('Remover livro'),
+                      ],
+                    ),
+                  ),
+                ],
+              );
               return Card(
                 margin: const EdgeInsets.only(bottom: 14),
                 child: Padding(

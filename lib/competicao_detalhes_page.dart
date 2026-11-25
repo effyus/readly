@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-import 'competicoes_acoes.dart';
 import 'registrar_leitura_competicao_page.dart';
 import 'participar_competicao_button.dart';
 import 'livros_competicao_page.dart';
@@ -36,6 +36,141 @@ class CompeticaoDetalhesPage extends StatelessWidget {
         return 'Meta coletiva';
       default:
         return 'Modalidade não definida';
+    }
+  }
+
+  Future<void> excluirCompeticao(BuildContext context, String nome) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir competição?'),
+        content: Text(
+          'Deseja excluir a competição "$nome"?\n\n'
+          'Ela deixará de aparecer nas listas ativas, '
+          'mas os registros de leitura serão preservados.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !context.mounted) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('clubes')
+          .doc(clubeId)
+          .collection('competicoes')
+          .doc(competicaoId)
+          .update({
+            'excluido': true,
+            'excluidoEm': FieldValue.serverTimestamp(),
+          });
+
+      if (!context.mounted) return;
+      Navigator.pop(context);
+    } on FirebaseException catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erro ao excluir: ${e.code}')));
+    }
+  }
+
+  Future<void> abrirEdicaoCompeticao(
+    BuildContext context,
+    String nomeAtual,
+    String descricaoAtual,
+  ) async {
+    final nomeController = TextEditingController(text: nomeAtual);
+    final descricaoController = TextEditingController(text: descricaoAtual);
+
+    try {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Editar competição'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nomeController,
+                  maxLength: 60,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome da competição',
+                    prefixIcon: Icon(Icons.edit_outlined),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descricaoController,
+                  maxLines: 3,
+                  maxLength: 300,
+                  decoration: const InputDecoration(
+                    labelText: 'Descrição',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (nomeController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('Informe um nome válido.')),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmar != true || !context.mounted) return;
+
+      await FirebaseFirestore.instance
+          .collection('clubes')
+          .doc(clubeId)
+          .collection('competicoes')
+          .doc(competicaoId)
+          .update({
+            'nome': nomeController.text.trim(),
+            'descricao': descricaoController.text.trim(),
+          });
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Competição atualizada com sucesso!')),
+      );
+    } on FirebaseException catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erro ao editar: ${e.code}')));
+    } finally {
+      nomeController.dispose();
+      descricaoController.dispose();
     }
   }
 
@@ -77,10 +212,71 @@ class CompeticaoDetalhesPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: _fundo,
+
       appBar: AppBar(
         title: const Text('Detalhes da competição'),
         backgroundColor: _fundo,
         foregroundColor: _cafe,
+        actions: [
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: referencia.snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return const SizedBox.shrink();
+              }
+
+              final dados = snapshot.data!.data() ?? {};
+              final uid = FirebaseAuth.instance.currentUser?.uid;
+
+              final souProprietario = uid != null && dados['criadoPor'] == uid;
+
+              if (!souProprietario || dados['excluido'] == true) {
+                return const SizedBox.shrink();
+              }
+
+              final nome = (dados['nome'] as String?) ?? 'Competição';
+
+              final descricao = (dados['descricao'] as String?) ?? '';
+
+              return PopupMenuButton<String>(
+                tooltip: 'Gerenciar competição',
+                icon: const Icon(Icons.more_vert_rounded),
+                onSelected: (opcao) {
+                  if (opcao == 'editar') {
+                    abrirEdicaoCompeticao(context, nome, descricao);
+                  } else if (opcao == 'excluir') {
+                    excluirCompeticao(context, nome);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem<String>(
+                    value: 'editar',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, color: Color(0xFF5D4037)),
+                        SizedBox(width: 10),
+                        Text('Editar competição'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'excluir',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline_rounded, color: Colors.red),
+                        SizedBox(width: 10),
+                        Text(
+                          'Excluir competição',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
 
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -99,7 +295,11 @@ class CompeticaoDetalhesPage extends StatelessWidget {
           }
 
           final dados = snapshot.data!.data()!;
-          final nome = dados['nome'] as String? ?? 'Competição';
+          final nome = (dados['nome'] as String?) ?? 'Competição';
+
+          final uid = FirebaseAuth.instance.currentUser?.uid;
+
+          final souProprietario = uid != null && dados['criadoPor'] == uid;
           final descricao = dados['descricao'] as String? ?? '';
           final modalidade = dados['modalidade'] as String?;
           final meta = (dados['metaValor'] as num?)?.toInt();
@@ -197,17 +397,7 @@ class CompeticaoDetalhesPage extends StatelessWidget {
                       ),
                     ],
 
-                    if (dados['excluido'] != true) ...[
-                      const SizedBox(height: 20),
-
-                      CompeticaoAcoes(
-                        clubeId: clubeId,
-                        competicaoId: competicaoId,
-                        criadorId: (dados['criadoPor'] as String?) ?? '',
-                        nome: (dados['nome'] as String?) ?? '',
-                        descricao: (dados['descricao'] as String?) ?? '',
-                      ),
-                    ],
+                    
                   ],
                 ),
               ),
