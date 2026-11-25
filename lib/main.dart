@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'login_page.dart';
+import 'package:get/get.dart';
+import 'package:fluttermoji/fluttermoji.dart';
 
 const Color corCafe = Color(0xFF5D4037);
 const Color corMarrom = Color(0xFF795548);
@@ -11,6 +13,7 @@ const Color corPapelClaro = Color(0xFFFFFCF7);
 const Color corBorda = Color(0xFFD8C7AE);
 const Color corTexto = Color(0xFF3E3028);
 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -18,8 +21,17 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Inicializa o controlador dos avatares Fluttermoji.
+  if (!Get.isRegistered<FluttermojiController>()) {
+    Get.put(
+      FluttermojiController(),
+      permanent: true,
+    );
+  }
+
   runApp(const ReadlyApp());
 }
+
 
 class ReadlyApp extends StatelessWidget {
   const ReadlyApp({super.key});

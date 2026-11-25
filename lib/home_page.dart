@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'personalizar_avatar_page.dart';
 import 'editar_perfil_page.dart';
 import 'entrar_clube_page.dart';
 import 'competicao_detalhes_page.dart';
@@ -13,6 +14,9 @@ import 'login_page.dart';
 
 import 'livros_competicao_page.dart';
 import 'leitura_service.dart';
+
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fluttermoji/fluttermoji.dart';
 
 class ReadlyHomePage extends StatefulWidget {
   const ReadlyHomePage({super.key});
@@ -152,10 +156,6 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
     const borda = Color(0xFFD8C7AE);
 
     final usuario = FirebaseAuth.instance.currentUser;
-    final nomeCompleto = usuario?.displayName?.trim() ?? '';
-    final primeiroNome = nomeCompleto.isEmpty
-        ? 'leitor'
-        : nomeCompleto.split(' ').first;
 
     Widget indicador(IconData icone, String valor, String titulo) {
       return Container(
@@ -210,14 +210,35 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
           ),
         ),
         const SizedBox(height: 10),
-        Text(
-          'Olá, $primeiroNome!',
-          style: const TextStyle(
-            fontSize: 28,
-            color: cafe,
-            fontWeight: FontWeight.bold,
-          ),
+
+        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(usuario!.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            final nomeFirestore =
+                (snapshot.data?.data()?['nome'] as String? ?? '').trim();
+
+            final nomeCompleto = nomeFirestore.isNotEmpty
+                ? nomeFirestore
+                : usuario.displayName?.trim() ?? '';
+
+            final primeiroNome = nomeCompleto.isEmpty
+                ? 'leitor'
+                : nomeCompleto.split(RegExp(r'\s+')).first;
+
+            return Text(
+              'Olá, $primeiroNome!',
+              style: const TextStyle(
+                fontSize: 28,
+                color: cafe,
+                fontWeight: FontWeight.bold,
+              ),
+            );
+          },
         ),
+
         const SizedBox(height: 6),
         const Text(
           'Cada página faz parte da sua história.',
@@ -1032,63 +1053,246 @@ class _ReadlyHomePageState extends State<ReadlyHomePage> {
   }
 
   Widget perfilPage() {
+    const cafe = Color(0xFF5D4037);
+    const marrom = Color(0xFF795548);
+    const papel = Color(0xFFFFFCF7);
+    const borda = Color(0xFFD8C7AE);
+
     final usuario = FirebaseAuth.instance.currentUser;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+    if (usuario == null) {
+      return const Center(child: Text('Faça login para acessar seu perfil.'));
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final dados = snapshot.data?.data() ?? {};
+        final avatarConfig = dados['avatarConfig'] as String?;
+
+        final nome = (dados['nome'] as String? ?? '').trim();
+        final fotoUrl = dados['fotoUrl'] as String?;
+
+        final nomeExibido = nome.isNotEmpty
+            ? nome
+            : usuario.displayName ?? 'Leitor do Readly';
+
+        final email = usuario.email ?? '';
+
+        final foto = fotoUrl != null && fotoUrl.startsWith('https://')
+            ? NetworkImage(fotoUrl)
+            : null;
+
+        return ListView(
+          padding: const EdgeInsets.all(20),
           children: [
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: marrom.withValues(alpha: 0.12),
-              child: Icon(Icons.person, size: 52, color: marrom),
-            ),
-            const SizedBox(height: 16),
             const Text(
               'Meu perfil',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-
-            ListTile(
-              leading: const Icon(
-                Icons.edit_outlined,
-                color: Color(0xFF5D4037),
+              style: TextStyle(
+                color: cafe,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
               ),
-              title: const Text('Editar meu nome'),
-              subtitle: const Text('Alterar nome exibido no Readly'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const EditarPerfilPage()),
-                );
-              },
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Seu espaço na comunidade Readly.',
+              style: TextStyle(color: marrom, fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+
+            Container(
+              padding: const EdgeInsets.all(23),
+              decoration: BoxDecoration(
+                color: papel,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: borda),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 110,
+                    height: 110,
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE7D7C2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: avatarConfig != null && avatarConfig.isNotEmpty
+                          ? SvgPicture.string(
+                              FluttermojiFunctions()
+                                  .decodeFluttermojifromString(avatarConfig),
+                              fit: BoxFit.contain,
+                            )
+                          : const Icon(
+                              Icons.person_rounded,
+                              size: 65,
+                              color: Color(0xFF795548),
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 17),
+
+                  const Divider(height: 1, indent: 18, endIndent: 18),
+
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 7,
+                    ),
+                    leading: const Icon(
+                      Icons.face_retouching_natural,
+                      color: Color(0xFF5D4037),
+                      size: 27,
+                    ),
+                    title: const Text(
+                      'Personalizar meu avatar',
+                      style: TextStyle(
+                        color: Color(0xFF5D4037),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text('Cabelo, rosto, roupas e acessórios'),
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      color: Color(0xFF795548),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PersonalizarAvatarPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  Text(
+                    nomeExibido,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: cafe,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 23,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Text(
+                    email,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: marrom, fontSize: 13),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0E5D5),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_stories_rounded, color: cafe, size: 17),
+                        SizedBox(width: 7),
+                        Text(
+                          'Leitor do Readly',
+                          style: TextStyle(
+                            color: cafe,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
 
-            Text(
-              usuario?.displayName ?? usuario?.email ?? 'Leitor do Readly',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Suas informações e estatísticas de leitura '
-              'aparecerão aqui.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade700),
-            ),
             const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: sairDaConta,
-              icon: const Icon(Icons.logout),
-              label: const Text('Sair da conta'),
+
+            Container(
+              decoration: BoxDecoration(
+                color: papel,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: borda),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 7,
+                    ),
+                    leading: const Icon(
+                      Icons.manage_accounts_outlined,
+                      color: cafe,
+                      size: 27,
+                    ),
+                    title: const Text(
+                      'Editar perfil',
+                      style: TextStyle(
+                        color: cafe,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text('Alterar nome e foto'),
+                    trailing: const Icon(Icons.chevron_right, color: marrom),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditarPerfilPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, indent: 18, endIndent: 18),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 7,
+                    ),
+                    leading: const Icon(
+                      Icons.logout_rounded,
+                      color: Colors.redAccent,
+                    ),
+                    title: const Text(
+                      'Sair da conta',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: marrom),
+                    onTap: sairDaConta,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 22),
+
+            const Center(
+              child: Text(
+                'Cada página faz parte da sua história.',
+                style: TextStyle(color: marrom, fontStyle: FontStyle.italic),
+              ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
